@@ -3,10 +3,22 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, Target, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import CountdownTimer from '@/components/CountdownTimer';
 import GlassCard from '@/components/GlassCard';
 
 export default function HomePage() {
+  const router = useRouter();
+
+  const handleDashboardAccess = () => {
+    const isAuthenticated = localStorage.getItem('authenticated');
+    if (isAuthenticated) {
+      router.push('/dashboard');
+    } else {
+      router.push('/signin');
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
       {/* Hero Section */}
@@ -92,12 +104,12 @@ export default function HomePage() {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
       >
-        <Link href="/dashboard">
+        <button onClick={handleDashboardAccess}>
           <GlassCard className="inline-flex items-center gap-3 px-8 py-4 cursor-pointer neon-glow hover:shadow-blue-500/70 transition-all duration-300">
             <span className="text-xl font-semibold">Enter Dashboard</span>
             <ArrowRight className="w-6 h-6" />
           </GlassCard>
-        </Link>
+        </button>
       </motion.div>
     </div>
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Plus, BarChart3, Calendar, BookOpen, FileText, Target } from 'lucide-react';
 import Link from 'next/link';
@@ -23,6 +24,15 @@ export default function Dashboard() {
   const [subjects, setSubjects] = useState<SubjectProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    const isAuthenticated = localStorage.getItem('authenticated');
+    if (!isAuthenticated) {
+      router.push('/signin');
+      return;
+    }
+  }, [router]);
 
   useEffect(() => {
     initializeApp();
