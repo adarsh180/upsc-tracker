@@ -18,6 +18,7 @@ import CountdownTimer from '@/components/CountdownTimer';
 
 import MotivationCard from '@/components/MotivationCard';
 import AdvancedAnalytics from '@/components/AdvancedAnalytics';
+import PredictionCard from '@/components/PredictionCard';
 import { SubjectProgress } from '@/types';
 
 export default function Dashboard() {
@@ -214,14 +215,14 @@ export default function Dashboard() {
         <AIInsights progressData={subjects} />
       </motion.div>
 
-      {/* Advanced Analytics */}
+      {/* AI Prediction Card */}
       <motion.div
         className="mb-6 md:mb-8"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
       >
-        <AdvancedAnalytics />
+        <PredictionCard />
       </motion.div>
 
       {/* Special Sections */}
