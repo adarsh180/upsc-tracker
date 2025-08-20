@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import { getConnection } from '@/lib/db';
 
 export async function PUT(request: Request) {
+  let connection;
   try {
-    const connection = await getConnection();
+    connection = await getConnection();
     const { id, updates } = await request.json();
 
     // Validate input
