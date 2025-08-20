@@ -1,0 +1,257 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Plus, BarChart3, Calendar, BookOpen, FileText, Target } from 'lucide-react';
+import Link from 'next/link';
+import SubjectCard from '@/components/SubjectCard';
+import GlassCard from '@/components/GlassCard';
+import AIInsights from '@/components/AIInsights';
+import CurrentAffairsSection from '@/components/CurrentAffairsSection';
+import EssaySection from '@/components/EssaySection';
+import OptionalSection from '@/components/OptionalSection';
+import CategoryCard from '@/components/CategoryCard';
+import MoodCalendar from '@/components/MoodCalendar';
+import ProgressTrackerCard from '@/components/ProgressTrackerCard';
+import CountdownTimer from '@/components/CountdownTimer';
+import GamificationCard from '@/components/GamificationCard';
+import MotivationCard from '@/components/MotivationCard';
+import { SubjectProgress } from '@/types';
+
+export default function Dashboard() {
+  const [subjects, setSubjects] = useState<SubjectProgress[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    initializeApp();
+  }, []);
+
+  const initializeApp = async () => {
+    try {
+      if (!initialized) {
+        // Initialize database and subjects
+        await fetch('/api/init', { method: 'POST' });
+        await fetch('/api/subjects/init', { method: 'POST' });
+        setInitialized(true);
+      }
+      
+      // Fetch subjects
+      const response = await fetch('/api/subjects');
+      const data = await response.json();
+      
+      // Ensure uniqueness by using subject and category as key
+      const uniqueSubjects = Object.values(
+        data.reduce((acc: { [key: string]: SubjectProgress }, curr: SubjectProgress) => {
+          const key = `${curr.category}-${curr.subject}`;
+          if (!acc[key] || curr.id < (acc[key].id || Infinity)) {
+            acc[key] = curr;
+          }
+          return acc;
+        }, {})
+      ) as SubjectProgress[];
+      
+      setSubjects(uniqueSubjects);
+    } catch (error) {
+      console.error('Failed to initialize:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubjectUpdate = async (id: number, field: string, value: number) => {
+    try {
+      await fetch('/api/subjects', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, field, value })
+      });
+
+      setSubjects(prev => prev.map(subject => 
+        subject.id === id ? { ...subject, [field]: value } : subject
+      ));
+    } catch (error) {
+      console.error('Failed to update subject:', error);
+    }
+  };
+
+  const groupedSubjects = subjects.reduce((acc, subject) => {
+    if (!acc[subject.category]) acc[subject.category] = [];
+    acc[subject.category].push(subject);
+    return acc;
+  }, {} as Record<string, SubjectProgress[]>);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          className="w-12 h-12 border-4 border-blue-400 border-t-transparent rounded-full"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen p-6">
+      {/* Header */}
+      <motion.div
+        className="mb-8"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-4xl font-bold gradient-text">Dashboard</h1>
+            <p className="text-gray-300 mt-2">Track your UPSC CSE preparation progress</p>
+          </div>
+          
+          <div className="flex gap-4">
+            <Link href="/dashboard/tests">
+              <GlassCard className="p-3 cursor-pointer hover:scale-105 transition-transform">
+                <BarChart3 className="w-6 h-6 text-blue-400" />
+              </GlassCard>
+            </Link>
+            <Link href="/dashboard/goals">
+              <GlassCard className="p-3 cursor-pointer hover:scale-105 transition-transform">
+                <Calendar className="w-6 h-6 text-purple-400" />
+              </GlassCard>
+            </Link>
+          </div>
+        </div>
+
+        {/* Countdown Timers & Motivation */}
+        <div className="grid md:grid-cols-2 gap-6 mb-4">
+          <CountdownTimer
+            examName="UPSC CSE Prelims 2026"
+            examDate="2026-05-24T00:00:00"
+            color="text-blue-400"
+          />
+          <CountdownTimer
+            examName="UPSC CSE Mains 2026"
+            examDate="2026-08-21T00:00:00"
+            color="text-blue-400"
+          />
+        </div>
+        
+        {/* Motivation Banner */}
+        <div className="mb-8">
+          <MotivationCard />
+        </div>
+      </motion.div>
+
+      {/* Category Cards */}
+      <div className="grid lg:grid-cols-2 gap-6 mb-8">
+        {Object.entries(groupedSubjects).map(([category, categorySubjects], categoryIndex) => {
+          const categoryConfig = {
+            'GS1': { icon: <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-sm">1</div>, color: 'text-blue-400' },
+            'GS2': { icon: <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-sm">2</div>, color: 'text-blue-400' },
+            'GS3': { icon: <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-sm">3</div>, color: 'text-blue-400' },
+            'GS4': { icon: <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-sm">4</div>, color: 'text-blue-400' },
+            'CSAT': { icon: <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-sm">C</div>, color: 'text-blue-400' }
+          }[category] || { icon: <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-sm">?</div>, color: 'text-blue-400' };
+          
+          return (
+            <motion.div
+              key={category}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: categoryIndex * 0.1 }}
+            >
+              <Link href={`/dashboard/${category.toLowerCase()}`}>
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <CategoryCard
+                    category={category}
+                    subjects={categorySubjects}
+                    onUpdate={handleSubjectUpdate}
+                    icon={categoryConfig.icon}
+                    color={categoryConfig.color}
+                  />
+                </motion.div>
+              </Link>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* AI Insights */}
+      <motion.div
+        className="mb-8"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+      >
+        <AIInsights progressData={subjects} />
+      </motion.div>
+
+      {/* Special Sections */}
+      <motion.div
+        className="grid lg:grid-cols-2 gap-6 mt-8"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+      >
+        <Link href="/dashboard/current-affairs">
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <CategoryCard
+              category="CURRENT AFFAIRS"
+              subjects={[{ id: 999, subject: 'Current Affairs', category: 'CURRENT AFFAIRS', total_lectures: 300, completed_lectures: 0, total_dpps: 0, completed_dpps: 0, revisions: 0, updated_at: '' }]}
+              onUpdate={() => {}}
+              icon={<div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-sm">CA</div>}
+              color="text-blue-400"
+            />
+          </motion.div>
+        </Link>
+        <Link href="/dashboard/essay">
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <CategoryCard
+              category="ESSAY"
+              subjects={[{ id: 998, subject: 'Essay Writing', category: 'ESSAY', total_lectures: 10, completed_lectures: 0, total_dpps: 100, completed_dpps: 0, revisions: 0, updated_at: '' }]}
+              onUpdate={() => {}}
+              icon={<div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-sm">E</div>}
+              color="text-blue-400"
+            />
+          </motion.div>
+        </Link>
+        <Link href="/dashboard/optional">
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <CategoryCard
+              category="OPTIONAL"
+              subjects={[
+                { id: 997, subject: 'Lectures', category: 'OPTIONAL', total_lectures: 140, completed_lectures: 0, total_dpps: 0, completed_dpps: 0, revisions: 0, updated_at: '' },
+                { id: 996, subject: 'Answer Writing', category: 'OPTIONAL', total_lectures: 140, completed_lectures: 0, total_dpps: 0, completed_dpps: 0, revisions: 0, updated_at: '' },
+                { id: 995, subject: 'PYQ', category: 'OPTIONAL', total_lectures: 140, completed_lectures: 0, total_dpps: 0, completed_dpps: 0, revisions: 0, updated_at: '' },
+                { id: 994, subject: 'Tests', category: 'OPTIONAL', total_lectures: 140, completed_lectures: 0, total_dpps: 0, completed_dpps: 0, revisions: 0, updated_at: '' }
+              ]}
+              onUpdate={() => {}}
+              icon={<div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-sm">O</div>}
+              color="text-blue-400"
+            />
+          </motion.div>
+        </Link>
+      </motion.div>
+
+      {/* Gamification & Progress */}
+      <motion.div
+        className="grid lg:grid-cols-2 gap-6 mt-8 mb-8"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+      >
+        <GamificationCard />
+        <ProgressTrackerCard />
+      </motion.div>
+
+      {/* Mood Calendar */}
+      <motion.div
+        className="mt-8"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.7 }}
+      >
+        <MoodCalendar />
+      </motion.div>
+    </div>
+  );
+}
