@@ -14,8 +14,9 @@ import CategoryCard from '@/components/CategoryCard';
 import MoodCalendar from '@/components/MoodCalendar';
 import ProgressTrackerCard from '@/components/ProgressTrackerCard';
 import CountdownTimer from '@/components/CountdownTimer';
-import GamificationCard from '@/components/GamificationCard';
+
 import MotivationCard from '@/components/MotivationCard';
+import AdvancedAnalytics from '@/components/AdvancedAnalytics';
 import { SubjectProgress } from '@/types';
 
 export default function Dashboard() {
@@ -61,17 +62,25 @@ export default function Dashboard() {
 
   const handleSubjectUpdate = async (id: number, field: string, value: number) => {
     try {
-      await fetch('/api/subjects', {
+      const response = await fetch('/api/subjects', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, field, value })
       });
 
+      if (!response.ok) {
+        throw new Error('Failed to update subject');
+      }
+
       setSubjects(prev => prev.map(subject => 
-        subject.id === id ? { ...subject, [field]: value } : subject
+        subject.id === id ? { ...subject, [field]: value, updated_at: new Date().toISOString() } : subject
       ));
     } catch (error) {
       console.error('Failed to update subject:', error);
+      // Refresh subjects from database on error
+      const response = await fetch('/api/subjects');
+      const data = await response.json();
+      setSubjects(data);
     }
   };
 
@@ -94,7 +103,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen p-6">
+    <div className="min-h-screen p-4 md:p-6">
       {/* Header */}
       <motion.div
         className="mb-8"
@@ -142,7 +151,7 @@ export default function Dashboard() {
       </motion.div>
 
       {/* Category Cards */}
-      <div className="grid lg:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
         {Object.entries(groupedSubjects).map(([category, categorySubjects], categoryIndex) => {
           const categoryConfig = {
             'GS1': { icon: <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-sm">1</div>, color: 'text-blue-400' },
@@ -177,12 +186,22 @@ export default function Dashboard() {
 
       {/* AI Insights */}
       <motion.div
-        className="mb-8"
+        className="mb-6 md:mb-8"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
       >
         <AIInsights progressData={subjects} />
+      </motion.div>
+
+      {/* Advanced Analytics */}
+      <motion.div
+        className="mb-6 md:mb-8"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+      >
+        <AdvancedAnalytics />
       </motion.div>
 
       {/* Special Sections */}
@@ -232,14 +251,13 @@ export default function Dashboard() {
         </Link>
       </motion.div>
 
-      {/* Gamification & Progress */}
+      {/* Progress */}
       <motion.div
-        className="grid lg:grid-cols-2 gap-6 mt-8 mb-8"
+        className="mt-8 mb-8"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
       >
-        <GamificationCard />
         <ProgressTrackerCard />
       </motion.div>
 

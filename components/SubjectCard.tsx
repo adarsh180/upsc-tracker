@@ -31,13 +31,13 @@ export default function SubjectCard({ subject, onUpdate }: SubjectCardProps) {
   const lectureProgress = calculateProgress(pendingProgress.completed_lectures, pendingCounts.total_lectures);
   const dppProgress = calculateProgress(pendingProgress.completed_dpps, pendingCounts.total_dpps);
 
-  const handleCheckboxToggle = (type: 'lecture' | 'dpp', index: number, checked: boolean) => {
+  const handleCheckboxToggle = (type: 'lecture' | 'dpp', index: number) => {
     if (type === 'lecture') {
-      const newCompleted = checked ? pendingProgress.completed_lectures + 1 : pendingProgress.completed_lectures - 1;
-      setPendingProgress(prev => ({ ...prev, completed_lectures: Math.max(0, newCompleted) }));
+      const newCompleted = index + 1;
+      setPendingProgress(prev => ({ ...prev, completed_lectures: newCompleted }));
     } else {
-      const newCompleted = checked ? pendingProgress.completed_dpps + 1 : pendingProgress.completed_dpps - 1;
-      setPendingProgress(prev => ({ ...prev, completed_dpps: Math.max(0, newCompleted) }));
+      const newCompleted = index + 1;
+      setPendingProgress(prev => ({ ...prev, completed_dpps: newCompleted }));
     }
     setHasChanges(true);
   };
@@ -65,10 +65,17 @@ export default function SubjectCard({ subject, onUpdate }: SubjectCardProps) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save changes');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save changes');
       }
 
       const result = await response.json();
+      
+      // Update parent component with new data
+      onUpdate(subject.id, 'total_lectures', result.data.total_lectures);
+      onUpdate(subject.id, 'total_dpps', result.data.total_dpps);
+      onUpdate(subject.id, 'completed_lectures', result.data.completed_lectures);
+      onUpdate(subject.id, 'completed_dpps', result.data.completed_dpps);
       
       // Update local state with the server response
       setPendingCounts({
@@ -84,6 +91,7 @@ export default function SubjectCard({ subject, onUpdate }: SubjectCardProps) {
       setConfiguring(false);
     } catch (error) {
       console.error('Failed to save changes:', error);
+      alert('Failed to save changes. Please try again.');
     }
   };
 
@@ -270,17 +278,18 @@ export default function SubjectCard({ subject, onUpdate }: SubjectCardProps) {
         >
           <div>
             <h4 className="text-sm font-medium mb-2 text-blue-400">Lectures</h4>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-10 gap-1">
               {Array.from({ length: pendingCounts.total_lectures }, (_, i) => (
                 <button
                   key={`lecture-${i}`}
-                  onClick={() => handleCheckboxToggle('lecture', i, i >= pendingProgress.completed_lectures)}
-                  className="flex items-center justify-center p-1 hover:bg-white/10 rounded"
+                  onClick={() => handleCheckboxToggle('lecture', i)}
+                  className="flex items-center justify-center p-1 hover:bg-white/10 rounded text-xs min-w-[24px] h-6"
+                  title={`Lecture ${i + 1}`}
                 >
                   {i < pendingProgress.completed_lectures ? (
-                    <CheckCircle className="w-4 h-4 text-green-400" />
+                    <span className="text-green-400 font-bold">{i + 1}</span>
                   ) : (
-                    <Circle className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-400">{i + 1}</span>
                   )}
                 </button>
               ))}
@@ -289,17 +298,18 @@ export default function SubjectCard({ subject, onUpdate }: SubjectCardProps) {
           
           <div>
             <h4 className="text-sm font-medium mb-2 text-blue-400">DPPs</h4>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-10 gap-1">
               {Array.from({ length: pendingCounts.total_dpps }, (_, i) => (
                 <button
                   key={`dpp-${i}`}
-                  onClick={() => handleCheckboxToggle('dpp', i, i >= pendingProgress.completed_dpps)}
-                  className="flex items-center justify-center p-1 hover:bg-white/10 rounded"
+                  onClick={() => handleCheckboxToggle('dpp', i)}
+                  className="flex items-center justify-center p-1 hover:bg-white/10 rounded text-xs min-w-[24px] h-6"
+                  title={`DPP ${i + 1}`}
                 >
                   {i < pendingProgress.completed_dpps ? (
-                    <CheckCircle className="w-4 h-4 text-green-400" />
+                    <span className="text-green-400 font-bold">{i + 1}</span>
                   ) : (
-                    <Circle className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-400">{i + 1}</span>
                   )}
                 </button>
               ))}

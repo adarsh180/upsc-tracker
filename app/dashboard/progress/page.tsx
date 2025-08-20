@@ -69,9 +69,10 @@ export default function ProgressPage() {
           { month: 'Feb', hours: 0, topics: 0, questions: 0 },
           { month: 'Mar', hours: 0, topics: 0, questions: 0 }
         ],
-        subjectProgress: (data?.subjects || []).slice(0, 6).map((s: any) => ({
+        subjectProgress: (data?.subjects || []).map((s: any) => ({
           subject: s.subject,
-          progress: Math.round(((s.completed_lectures + s.completed_dpps) / (s.total_lectures + s.total_dpps)) * 100)
+          category: s.category,
+          progress: Math.round(((s.completed_lectures + s.completed_dpps) / (s.total_lectures + s.total_dpps)) * 100) || 0
         }))
       });
     } catch (error) {
@@ -253,35 +254,51 @@ export default function ProgressPage() {
       >
         <GlassCard>
           <h3 className="text-xl font-semibold mb-6 text-green-400">Subject-wise Progress</h3>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {progressData.subjectProgress.map((subject, index) => (
-              <div key={subject.subject} className="text-center">
-                <div className="relative w-20 h-20 mx-auto mb-3">
-                  <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 36 36">
-                    <path
-                      d="m18,2.0845 a 15.9155,15.9155 0 0,1 0,31.831 a 15.9155,15.9155 0 0,1 0,-31.831"
-                      fill="none"
-                      stroke="rgba(255,255,255,0.1)"
-                      strokeWidth="3"
-                    />
-                    <motion.path
-                      d="m18,2.0845 a 15.9155,15.9155 0 0,1 0,31.831 a 15.9155,15.9155 0 0,1 0,-31.831"
-                      fill="none"
-                      stroke="#10B981"
-                      strokeWidth="3"
-                      strokeDasharray={`${subject.progress}, 100`}
-                      initial={{ strokeDasharray: "0, 100" }}
-                      animate={{ strokeDasharray: `${subject.progress}, 100` }}
-                      transition={{ duration: 1, delay: index * 0.1 }}
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-sm font-bold text-white">{subject.progress}%</span>
+          <div className="grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            {progressData.subjectProgress.map((subject, index) => {
+              const categoryColors = {
+                'GS1': '#3B82F6',
+                'GS2': '#8B5CF6', 
+                'GS3': '#10B981',
+                'GS4': '#F59E0B',
+                'CSAT': '#EF4444',
+                'OPTIONAL': '#06B6D4',
+                'CURRENT AFFAIRS': '#84CC16',
+                'ESSAY': '#F97316',
+                'ETHICS': '#EC4899'
+              };
+              const color = categoryColors[subject.category as keyof typeof categoryColors] || '#10B981';
+              
+              return (
+                <div key={`${subject.category}-${subject.subject}`} className="text-center">
+                  <div className="relative w-20 h-20 mx-auto mb-3">
+                    <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 36 36">
+                      <path
+                        d="m18,2.0845 a 15.9155,15.9155 0 0,1 0,31.831 a 15.9155,15.9155 0 0,1 0,-31.831"
+                        fill="none"
+                        stroke="rgba(255,255,255,0.1)"
+                        strokeWidth="3"
+                      />
+                      <motion.path
+                        d="m18,2.0845 a 15.9155,15.9155 0 0,1 0,31.831 a 15.9155,15.9155 0 0,1 0,-31.831"
+                        fill="none"
+                        stroke={color}
+                        strokeWidth="3"
+                        strokeDasharray={`${subject.progress}, 100`}
+                        initial={{ strokeDasharray: "0, 100" }}
+                        animate={{ strokeDasharray: `${subject.progress}, 100` }}
+                        transition={{ duration: 1, delay: index * 0.1 }}
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-sm font-bold text-white">{subject.progress}%</span>
+                    </div>
                   </div>
+                  <div className="text-sm font-medium text-white">{subject.subject}</div>
+                  <div className="text-xs text-gray-400 mt-1">{subject.category}</div>
                 </div>
-                <div className="text-sm font-medium text-white">{subject.subject}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </GlassCard>
       </motion.div>

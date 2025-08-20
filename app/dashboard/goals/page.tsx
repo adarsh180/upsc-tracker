@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Calendar, Clock, BookOpen, ArrowLeft, TrendingUp } from 'lucide-react';
+import { Plus, Calendar, Clock, BookOpen, ArrowLeft, TrendingUp, BarChart3, Target, Award } from 'lucide-react';
 import Link from 'next/link';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar } from 'recharts';
 import GlassCard from '@/components/GlassCard';
 import { DailyGoal } from '@/types';
 
@@ -108,38 +108,52 @@ export default function GoalsPage() {
     return date.toISOString().split('T')[0];
   });
 
-  const [trendData, setTrendData] = useState<any[]>([]);
+  const [analyticsData, setAnalyticsData] = useState<{
+    daily: any[];
+    weekly: any[];
+    monthly: any[];
+    lifetime: any;
+  }>({
+    daily: [],
+    weekly: [],
+    monthly: [],
+    lifetime: { total_hours: 0, total_topics: 0, total_questions: 0, total_sessions: 0, study_days: 0 }
+  });
+  const [activeTab, setActiveTab] = useState('daily');
 
-  const fetchTrendData = async () => {
-    const data = await Promise.all(
-      last7Days.map(async (date) => {
-        try {
-          const response = await fetch(`/api/goals?date=${date}`);
-          const dayGoals = await response.json();
-          const hours = dayGoals.reduce((sum: number, goal: DailyGoal) => sum + parseFloat(goal.hours_studied.toString()), 0);
-          const topics = dayGoals.reduce((sum: number, goal: DailyGoal) => sum + goal.topics_covered, 0);
+  const fetchAnalyticsData = async () => {
+    try {
+      const response = await fetch('/api/goals/analytics');
+      const data = await response.json();
+      setAnalyticsData({
+        daily: data.daily.map((d: any) => ({
+          ...d,
+          date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        })),
+        weekly: data.weekly.map((w: any) => ({
+          ...w,
+          label: `W${w.week}`
+        })),
+        monthly: data.monthly.map((m: any) => {
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
           return {
-            date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            hours,
-            topics
+            ...m,
+            label: `${monthNames[m.month_num - 1]} ${m.year}`
           };
-        } catch {
-          return { date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), hours: 0, topics: 0 };
-        }
-      })
-    );
-    setTrendData(data);
+        }),
+        lifetime: data.lifetime
+      });
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error);
+    }
   };
 
   useEffect(() => {
-    fetchTrendData();
+    fetchAnalyticsData();
   }, []);
 
-  // Update trend data when goals change
   useEffect(() => {
-    if (goals.length > 0) {
-      fetchTrendData();
-    }
+    fetchAnalyticsData();
   }, [goals.length]);
 
   if (loading) {
@@ -165,7 +179,7 @@ export default function GoalsPage() {
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
             <Link href="/dashboard">
-              <GlassCard className="p-2 cursor-pointer hover:scale-105 transition-transform">
+              <GlassCard className="p-2 cursor-pointer">
                 <ArrowLeft className="w-5 h-5" />
               </GlassCard>
             </Link>
@@ -184,7 +198,7 @@ export default function GoalsPage() {
             />
             <button
               onClick={() => setShowAddForm(true)}
-              className="flex items-center gap-2 bg-blue-500/20 hover:bg-blue-500/30 px-4 py-2 rounded-lg transition-colors"
+              className="flex items-center gap-2 bg-blue-500/20 px-4 py-2 rounded-lg"
             >
               <Plus className="w-5 h-5" />
               Add Entry
@@ -192,80 +206,166 @@ export default function GoalsPage() {
           </div>
         </div>
 
-        {/* Daily Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Lifetime Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <GlassCard className="text-center">
-            <Calendar className="w-8 h-8 text-blue-400 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-blue-400">
+            <Clock className="w-8 h-8 text-blue-400 mx-auto mb-2" />
+            <div className="text-2xl font-bold text-blue-400">{analyticsData.lifetime.total_hours}</div>
+            <div className="text-sm text-gray-300">Total Hours</div>
+          </GlassCard>
+          
+          <GlassCard className="text-center">
+            <BookOpen className="w-8 h-8 text-green-400 mx-auto mb-2" />
+            <div className="text-2xl font-bold text-green-400">{analyticsData.lifetime.total_topics}</div>
+            <div className="text-sm text-gray-300">Total Topics</div>
+          </GlassCard>
+          
+          <GlassCard className="text-center">
+            <Target className="w-8 h-8 text-purple-400 mx-auto mb-2" />
+            <div className="text-2xl font-bold text-purple-400">{analyticsData.lifetime.total_questions}</div>
+            <div className="text-sm text-gray-300">Questions Solved</div>
+          </GlassCard>
+          
+          <GlassCard className="text-center">
+            <Award className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
+            <div className="text-2xl font-bold text-yellow-400">{analyticsData.lifetime.study_days}</div>
+            <div className="text-sm text-gray-300">Study Days</div>
+          </GlassCard>
+          
+          <GlassCard className="text-center">
+            <TrendingUp className="w-8 h-8 text-red-400 mx-auto mb-2" />
+            <div className="text-2xl font-bold text-red-400">{analyticsData.lifetime.total_sessions}</div>
+            <div className="text-sm text-gray-300">Total Sessions</div>
+          </GlassCard>
+        </div>
+
+        {/* Today's Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+          <GlassCard className="text-center">
+            <Calendar className="w-6 h-6 text-blue-400 mx-auto mb-2" />
+            <div className="text-xl font-bold text-blue-400">
               {new Date(selectedDate).toLocaleDateString('en-US', { day: 'numeric' })}
             </div>
-            <div className="text-sm text-gray-300">
+            <div className="text-xs text-gray-300">
               {new Date(selectedDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
             </div>
           </GlassCard>
           
           <GlassCard className="text-center">
-            <Clock className="w-8 h-8 text-green-400 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-green-400">{totalHours.toFixed(1)}</div>
-            <div className="text-sm text-gray-300">Hours Studied</div>
+            <Clock className="w-6 h-6 text-green-400 mx-auto mb-2" />
+            <div className="text-xl font-bold text-green-400">{totalHours.toFixed(1)}</div>
+            <div className="text-xs text-gray-300">Today's Hours</div>
           </GlassCard>
           
           <GlassCard className="text-center">
-            <BookOpen className="w-8 h-8 text-purple-400 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-purple-400">{totalTopics}</div>
-            <div className="text-sm text-gray-300">Topics Covered</div>
+            <BookOpen className="w-6 h-6 text-purple-400 mx-auto mb-2" />
+            <div className="text-xl font-bold text-purple-400">{totalTopics}</div>
+            <div className="text-xs text-gray-300">Today's Topics</div>
           </GlassCard>
           
           <GlassCard className="text-center">
-            <TrendingUp className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-yellow-400">{goals.length}</div>
-            <div className="text-sm text-gray-300">Study Sessions</div>
+            <TrendingUp className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
+            <div className="text-xl font-bold text-yellow-400">{goals.length}</div>
+            <div className="text-xs text-gray-300">Today's Sessions</div>
           </GlassCard>
         </div>
       </motion.div>
 
-      {/* Trend Chart */}
-      {trendData.length > 0 && (
-        <div className="grid lg:grid-cols-2 gap-6 mb-8">
-          <GlassCard>
-            <h3 className="text-xl font-semibold mb-4 text-blue-400">Study Hours Trend</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="date" stroke="#9CA3AF" />
-                <YAxis stroke="#9CA3AF" />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'rgba(0,0,0,0.8)', 
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    borderRadius: '8px'
-                  }}
-                />
-                <Line type="monotone" dataKey="hours" stroke="#10B981" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          </GlassCard>
-
-          <GlassCard>
-            <h3 className="text-xl font-semibold mb-4 text-purple-400">Topics Covered Trend</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="date" stroke="#9CA3AF" />
-                <YAxis stroke="#9CA3AF" />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'rgba(0,0,0,0.8)', 
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    borderRadius: '8px'
-                  }}
-                />
-                <Line type="monotone" dataKey="topics" stroke="#8B5CF6" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          </GlassCard>
+      {/* Progress Analytics */}
+      <GlassCard className="mb-8">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-2xl font-semibold text-blue-400">Progress Analytics</h3>
+          <div className="flex gap-2">
+            {['daily', 'weekly', 'monthly'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                  activeTab === tab
+                    ? 'bg-blue-500/30 text-blue-400'
+                    : 'bg-white/10 text-gray-400'
+                }`}
+              >
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
-      )}
+
+        <div className="grid lg:grid-cols-2 gap-6">
+          <div>
+            <h4 className="text-lg font-medium mb-4 text-green-400">Study Hours Trend</h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={analyticsData[activeTab as keyof typeof analyticsData] || []}>
+                <defs>
+                  <linearGradient id="colorHours" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis 
+                  dataKey={activeTab === 'daily' ? 'date' : activeTab === 'weekly' ? 'label' : 'label'} 
+                  stroke="#9CA3AF" 
+                  fontSize={12}
+                />
+                <YAxis stroke="#9CA3AF" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(0,0,0,0.8)', 
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '8px'
+                  }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="hours" 
+                  stroke="#10B981" 
+                  fillOpacity={1} 
+                  fill="url(#colorHours)"
+                  strokeWidth={2}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div>
+            <h4 className="text-lg font-medium mb-4 text-purple-400">Topics & Questions Trend</h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={analyticsData[activeTab as keyof typeof analyticsData] || []}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis 
+                  dataKey={activeTab === 'daily' ? 'date' : activeTab === 'weekly' ? 'label' : 'label'} 
+                  stroke="#9CA3AF" 
+                  fontSize={12}
+                />
+                <YAxis stroke="#9CA3AF" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(0,0,0,0.8)', 
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '8px'
+                  }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="topics" 
+                  stroke="#8B5CF6" 
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="questions" 
+                  stroke="#F59E0B" 
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </GlassCard>
 
       {/* Daily Entries */}
       <GlassCard>

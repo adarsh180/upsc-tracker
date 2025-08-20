@@ -66,6 +66,21 @@ export async function GET() {
       'SELECT * FROM subject_progress WHERE user_id = 1'
     );
     
+    // Get current affairs progress
+    const [currentAffairs] = await connection.execute(
+      'SELECT * FROM current_affairs WHERE user_id = 1 LIMIT 1'
+    );
+    
+    // Get essay progress
+    const [essayProgress] = await connection.execute(
+      'SELECT * FROM essay_progress WHERE user_id = 1 LIMIT 1'
+    );
+    
+    // Get optional progress
+    const [optionalProgress] = await connection.execute(
+      'SELECT * FROM optional_progress WHERE user_id = 1'
+    );
+    
     const [tests] = await connection.execute(
       'SELECT *, CASE WHEN test_type = "prelims" THEN 100 WHEN test_type = "mains" THEN 20 ELSE 20 END as questions_count FROM test_records WHERE user_id = 1 ORDER BY attempt_date DESC'
     );
@@ -78,6 +93,96 @@ export async function GET() {
     const subjectsArray = Array.isArray(subjects) ? subjects as any[] : [];
     const testsArray = Array.isArray(tests) ? tests as any[] : [];
     const goalsArray = Array.isArray(goals) ? goals as any[] : [];
+    const currentAffairsArray = Array.isArray(currentAffairs) ? currentAffairs as any[] : [];
+    const essayProgressArray = Array.isArray(essayProgress) ? essayProgress as any[] : [];
+    const optionalProgressArray = Array.isArray(optionalProgress) ? optionalProgress as any[] : [];
+    
+    // Process all subjects data
+    const allSubjectsData = [...subjectsArray];
+    
+    // Add current affairs data
+    if (currentAffairsArray.length > 0) {
+      const ca = currentAffairsArray[0];
+      allSubjectsData.push({
+        subject: 'Current Affairs',
+        category: 'CURRENT AFFAIRS',
+        completed_lectures: ca.completed_topics || 0,
+        total_lectures: ca.total_topics || 300,
+        completed_dpps: 0,
+        total_dpps: 0
+      });
+    } else {
+      allSubjectsData.push({
+        subject: 'Current Affairs',
+        category: 'CURRENT AFFAIRS',
+        completed_lectures: 0,
+        total_lectures: 300,
+        completed_dpps: 0,
+        total_dpps: 0
+      });
+    }
+    
+    // Add essay data
+    if (essayProgressArray.length > 0) {
+      const essay = essayProgressArray[0];
+      allSubjectsData.push({
+        subject: 'Essay Writing',
+        category: 'ESSAY',
+        completed_lectures: essay.lectures_completed || 0,
+        total_lectures: essay.total_lectures || 10,
+        completed_dpps: essay.essays_written || 0,
+        total_dpps: essay.total_essays || 100
+      });
+    } else {
+      allSubjectsData.push({
+        subject: 'Essay Writing',
+        category: 'ESSAY',
+        completed_lectures: 0,
+        total_lectures: 10,
+        completed_dpps: 0,
+        total_dpps: 100
+      });
+    }
+    
+    // Add optional subjects with Paper 2 logic
+    const optionalSections = ['Lectures', 'Answer Writing', 'PYQ', 'Tests'];
+    optionalSections.forEach(section => {
+      const optionalData = optionalProgressArray.find(op => op.section_name === section);
+      if (optionalData) {
+        allSubjectsData.push({
+          subject: `Optional ${section}`,
+          category: 'OPTIONAL',
+          completed_lectures: optionalData.completed_items || 0,
+          total_lectures: optionalData.total_items || 140,
+          completed_dpps: 0,
+          total_dpps: 0
+        });
+      } else {
+        allSubjectsData.push({
+          subject: `Optional ${section}`,
+          category: 'OPTIONAL',
+          completed_lectures: 0,
+          total_lectures: 140,
+          completed_dpps: 0,
+          total_dpps: 0
+        });
+      }
+    });
+    
+    // Add Optional Paper 2 (unlocks after 90 lectures completed)
+    const lecturesCompleted = optionalProgressArray.find(op => op.section_name === 'Lectures')?.completed_items || 0;
+    if (lecturesCompleted >= 90) {
+      allSubjectsData.push({
+        subject: 'Optional Paper 2',
+        category: 'OPTIONAL',
+        completed_lectures: Math.max(0, lecturesCompleted - 90),
+        total_lectures: 50,
+        completed_dpps: 0,
+        total_dpps: 0
+      });
+    }
+    
+    // Ethics is already included in subjectsArray from GS4 category, no need to add separately
     
     // Safe calculations
     const totalDppQuestions = subjectsArray.reduce((sum, s) => sum + (s?.questions_count || 0), 0);
@@ -119,7 +224,7 @@ export async function GET() {
     releaseConnection(connection);
     
     return NextResponse.json({
-      subjects: subjectsArray,
+      subjects: allSubjectsData,
       tests: testsArray,
       goals: goalsArray,
       analytics: {

@@ -7,6 +7,14 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'UPSC CSE Tracker',
   description: 'Modern UPSC CSE preparation dashboard with AI-powered insights',
+  manifest: '/manifest.json',
+  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no',
+  themeColor: '#3b82f6',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'UPSC Tracker'
+  }
 };
 
 export default function RootLayout({

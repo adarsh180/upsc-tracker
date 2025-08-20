@@ -27,12 +27,17 @@ export async function PUT(request: Request) {
       [id]
     ) as [any[], any];
 
+    await connection.end();
+
     return NextResponse.json({ 
       message: 'Subject updated successfully',
       data: rows[0]
     });
   } catch (error) {
     console.error('Failed to update subject:', error);
+    try {
+      await connection?.end();
+    } catch (e) {}
     return NextResponse.json({ error: 'Failed to update subject' }, { status: 500 });
   }
 }
