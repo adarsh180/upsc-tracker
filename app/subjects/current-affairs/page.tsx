@@ -2,14 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, CheckCircle, Circle, Newspaper, Calendar } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Circle, Newspaper, Calendar, Save, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 import GlassCard from '@/components/GlassCard';
 import { calculateProgress } from '@/lib/utils';
 
 export default function CurrentAffairsSubjectsPage() {
-  const [completed, setCompleted] = useState(0);
+  const [topics, setTopics] = useState<boolean[]>(new Array(300).fill(false));
+  const [savedTopics, setSavedTopics] = useState<boolean[]>(new Array(300).fill(false));
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const total = 300;
 
   useEffect(() => {
@@ -20,30 +22,57 @@ export default function CurrentAffairsSubjectsPage() {
     try {
       const response = await fetch('/api/current-affairs');
       const data = await response.json();
-      setCompleted(data.completed_topics || 0);
+      
+      const newTopics = new Array(300).fill(false);
+      for (let i = 0; i < (data.completed_topics || 0); i++) {
+        newTopics[i] = true;
+      }
+      
+      setTopics(newTopics);
+      setSavedTopics([...newTopics]);
     } catch (error) {
-      console.error('Failed to fetch progress:', error);
+      console.error('Failed to fetch current affairs progress:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const updateProgress = async (newCompleted: number) => {
+  const saveProgress = async () => {
+    setSaving(true);
     try {
+      const completedCount = topics.filter(Boolean).length;
+      
       await fetch('/api/current-affairs', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ completed_topics: newCompleted })
+        body: JSON.stringify({
+          completed_topics: completedCount
+        })
       });
+      
+      setSavedTopics([...topics]);
     } catch (error) {
-      console.error('Failed to update progress:', error);
+      console.error('Failed to save progress:', error);
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleCheckboxToggle = (index: number, checked: boolean) => {
-    const newCompleted = checked ? completed + 1 : Math.max(0, completed - 1);
-    setCompleted(newCompleted);
-    updateProgress(newCompleted);
+  const resetChanges = () => {
+    setTopics([...savedTopics]);
+  };
+
+  const hasChanges = JSON.stringify(topics) !== JSON.stringify(savedTopics);
+
+  const handleCheckboxToggle = (index: number) => {
+    setTopics(prev => prev.map((checked, i) => i === index ? !checked : checked));
+  };
+
+  const addOneTopic = () => {
+    const firstUncheckedIndex = topics.findIndex(topic => !topic);
+    if (firstUncheckedIndex !== -1) {
+      handleCheckboxToggle(firstUncheckedIndex);
+    }
   };
 
   if (loading) {
@@ -54,6 +83,7 @@ export default function CurrentAffairsSubjectsPage() {
     );
   }
 
+  const completed = topics.filter(Boolean).length;
   const progress = calculateProgress(completed, total);
 
   return (
@@ -96,13 +126,33 @@ export default function CurrentAffairsSubjectsPage() {
           />
         </div>
 
+        {hasChanges && (
+          <div className="flex gap-2 mb-6">
+            <button
+              onClick={saveProgress}
+              disabled={saving}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 px-4 py-2 rounded text-sm transition-colors"
+            >
+              <Save className="w-4 h-4" />
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+            <button
+              onClick={resetChanges}
+              className="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded text-sm transition-colors"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Reset
+            </button>
+          </div>
+        )}
+
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2 text-sm text-gray-300">
             <Calendar className="w-4 h-4" />
             <span>Daily tracking</span>
           </div>
           <button
-            onClick={() => setCompleted(prev => Math.min(total, prev + 1))}
+            onClick={addOneTopic}
             className="bg-blue-500/20 hover:bg-blue-500/30 px-4 py-2 rounded transition-colors"
           >
             +1 Topic
@@ -113,18 +163,19 @@ export default function CurrentAffairsSubjectsPage() {
           {Array.from({ length: total }, (_, i) => (
             <button
               key={i}
-              onClick={() => handleCheckboxToggle(i, i >= completed)}
-              className="flex items-center justify-center p-2 hover:bg-white/10 rounded"
+              onClick={() => handleCheckboxToggle(i)}
+              className="flex items-center justify-center p-2 hover:bg-white/10 rounded transition-colors"
               title={`Topic ${i + 1}`}
             >
-              {i < completed ? (
+              {topics[i] ? (
                 <CheckCircle className="w-4 h-4 text-green-400" />
               ) : (
                 <Circle className="w-4 h-4 text-gray-400" />
               )}
             </button>
-          ))}
-        </div>
+          ))
+}
+</div>
       </GlassCard>
     </div>
   );

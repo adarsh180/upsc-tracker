@@ -2,16 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, CheckCircle, Circle, BookOpen, PenTool } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Circle, BookOpen, PenTool, Save, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 import GlassCard from '@/components/GlassCard';
 import { calculateProgress } from '@/lib/utils';
 
 export default function EssaySubjectsPage() {
-  const [lecturesCompleted, setLecturesCompleted] = useState(0);
-  const [essaysWritten, setEssaysWritten] = useState(0);
+  const [lectures, setLectures] = useState<boolean[]>(new Array(10).fill(false));
+  const [essays, setEssays] = useState<boolean[]>(new Array(100).fill(false));
+  const [savedLectures, setSavedLectures] = useState<boolean[]>(new Array(10).fill(false));
+  const [savedEssays, setSavedEssays] = useState<boolean[]>(new Array(100).fill(false));
   const [showSection, setShowSection] = useState<'lectures' | 'essays' | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const totalLectures = 10;
   const totalEssays = 100;
@@ -24,36 +27,65 @@ export default function EssaySubjectsPage() {
     try {
       const response = await fetch('/api/essay');
       const data = await response.json();
-      setLecturesCompleted(data.lectures_completed || 0);
-      setEssaysWritten(data.essays_written || 0);
+      
+      const newLectures = new Array(10).fill(false);
+      const newEssays = new Array(100).fill(false);
+      
+      for (let i = 0; i < (data.lectures_completed || 0); i++) {
+        newLectures[i] = true;
+      }
+      for (let i = 0; i < (data.essays_written || 0); i++) {
+        newEssays[i] = true;
+      }
+      
+      setLectures(newLectures);
+      setEssays(newEssays);
+      setSavedLectures([...newLectures]);
+      setSavedEssays([...newEssays]);
     } catch (error) {
-      console.error('Failed to fetch progress:', error);
+      console.error('Failed to fetch essay progress:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const updateProgress = async (lectures: number, essays: number) => {
+  const saveProgress = async () => {
+    setSaving(true);
     try {
+      const lecturesCompleted = lectures.filter(Boolean).length;
+      const essaysWritten = essays.filter(Boolean).length;
+      
       await fetch('/api/essay', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lectures_completed: lectures, essays_written: essays })
+        body: JSON.stringify({
+          lectures_completed: lecturesCompleted,
+          essays_written: essaysWritten
+        })
       });
+      
+      setSavedLectures([...lectures]);
+      setSavedEssays([...essays]);
     } catch (error) {
-      console.error('Failed to update progress:', error);
+      console.error('Failed to save progress:', error);
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleToggle = (type: 'lectures' | 'essays', index: number, checked: boolean) => {
+  const resetChanges = () => {
+    setLectures([...savedLectures]);
+    setEssays([...savedEssays]);
+  };
+
+  const hasChanges = JSON.stringify(lectures) !== JSON.stringify(savedLectures) || 
+                    JSON.stringify(essays) !== JSON.stringify(savedEssays);
+
+  const handleToggle = (type: 'lectures' | 'essays', index: number) => {
     if (type === 'lectures') {
-      const newCompleted = checked ? lecturesCompleted + 1 : Math.max(0, lecturesCompleted - 1);
-      setLecturesCompleted(newCompleted);
-      updateProgress(newCompleted, essaysWritten);
+      setLectures(prev => prev.map((checked, i) => i === index ? !checked : checked));
     } else {
-      const newCompleted = checked ? essaysWritten + 1 : Math.max(0, essaysWritten - 1);
-      setEssaysWritten(newCompleted);
-      updateProgress(lecturesCompleted, newCompleted);
+      setEssays(prev => prev.map((checked, i) => i === index ? !checked : checked));
     }
   };
 
@@ -65,6 +97,8 @@ export default function EssaySubjectsPage() {
     );
   }
 
+  const lecturesCompleted = lectures.filter(Boolean).length;
+  const essaysWritten = essays.filter(Boolean).length;
   const lectureProgress = calculateProgress(lecturesCompleted, totalLectures);
   const essayProgress = calculateProgress(essaysWritten, totalEssays);
 
@@ -87,6 +121,26 @@ export default function EssaySubjectsPage() {
           </div>
         </div>
       </motion.div>
+
+      {hasChanges && (
+        <div className="flex gap-2 mb-6">
+          <button
+            onClick={saveProgress}
+            disabled={saving}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 px-4 py-2 rounded text-sm transition-colors"
+          >
+            <Save className="w-4 h-4" />
+            {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+          <button
+            onClick={resetChanges}
+            className="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded text-sm transition-colors"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Reset
+          </button>
+        </div>
+      )}
 
       <div className="grid md:grid-cols-2 gap-6">
         <GlassCard>
@@ -121,11 +175,11 @@ export default function EssaySubjectsPage() {
               {Array.from({ length: totalLectures }, (_, i) => (
                 <button
                   key={i}
-                  onClick={() => handleToggle('lectures', i, i >= lecturesCompleted)}
-                  className="flex items-center justify-center p-2 hover:bg-white/10 rounded"
+                  onClick={() => handleToggle('lectures', i)}
+                  className="flex items-center justify-center p-2 hover:bg-white/10 rounded transition-colors"
                   title={`Lecture ${i + 1}`}
                 >
-                  {i < lecturesCompleted ? (
+                  {lectures[i] ? (
                     <CheckCircle className="w-4 h-4 text-green-400" />
                   ) : (
                     <Circle className="w-4 h-4 text-gray-400" />
@@ -168,18 +222,18 @@ export default function EssaySubjectsPage() {
               {Array.from({ length: totalEssays }, (_, i) => (
                 <button
                   key={i}
-                  onClick={() => handleToggle('essays', i, i >= essaysWritten)}
-                  className="flex items-center justify-center p-1 hover:bg-white/10 rounded"
+                  onClick={() => handleToggle('essays', i)}
+                  className="flex items-center justify-center p-1 hover:bg-white/10 rounded transition-colors"
                   title={`Essay ${i + 1}`}
                 >
-                  {i < essaysWritten ? (
+                  {essays[i] ? (
                     <CheckCircle className="w-3 h-3 text-green-400" />
                   ) : (
                     <Circle className="w-3 h-3 text-gray-400" />
                   )}
                 </button>
-              ))}
-            </div>
+              ))
+             } </div>
           )}
         </GlassCard>
       </div>

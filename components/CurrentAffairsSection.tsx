@@ -2,17 +2,78 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, Circle, Newspaper, Calendar } from 'lucide-react';
+import { CheckCircle, Circle, Newspaper, Calendar, Save, RotateCcw } from 'lucide-react';
 import GlassCard from './GlassCard';
 import { calculateProgress } from '@/lib/utils';
 
 export default function CurrentAffairsSection() {
-  const [completed, setCompleted] = useState(0);
+  const [topics, setTopics] = useState<boolean[]>(new Array(300).fill(false));
+  const [savedTopics, setSavedTopics] = useState<boolean[]>(new Array(300).fill(false));
   const [showCheckboxes, setShowCheckboxes] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const total = 300;
 
-  const handleCheckboxToggle = (index: number, checked: boolean) => {
-    setCompleted(prev => checked ? prev + 1 : Math.max(0, prev - 1));
+  useEffect(() => {
+    fetchProgress();
+  }, []);
+
+  const fetchProgress = async () => {
+    try {
+      const response = await fetch('/api/current-affairs');
+      const data = await response.json();
+      
+      const newTopics = new Array(300).fill(false);
+      for (let i = 0; i < (data.completed_topics || 0); i++) {
+        newTopics[i] = true;
+      }
+      
+      setTopics(newTopics);
+      setSavedTopics([...newTopics]);
+    } catch (error) {
+      console.error('Failed to fetch current affairs progress:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveProgress = async () => {
+    setSaving(true);
+    try {
+      const completedCount = topics.filter(Boolean).length;
+      
+      await fetch('/api/current-affairs', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          completed_topics: completedCount
+        })
+      });
+      
+      setSavedTopics([...topics]);
+    } catch (error) {
+      console.error('Failed to save progress:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resetChanges = () => {
+    setTopics([...savedTopics]);
+  };
+
+  const hasChanges = JSON.stringify(topics) !== JSON.stringify(savedTopics);
+  const completed = topics.filter(Boolean).length;
+
+  const handleCheckboxToggle = (index: number) => {
+    setTopics(prev => prev.map((checked, i) => i === index ? !checked : checked));
+  };
+
+  const addOneTopic = () => {
+    const firstUncheckedIndex = topics.findIndex(topic => !topic);
+    if (firstUncheckedIndex !== -1) {
+      handleCheckboxToggle(firstUncheckedIndex);
+    }
   };
 
   const progress = calculateProgress(completed, total);
@@ -23,6 +84,26 @@ export default function CurrentAffairsSection() {
         <Newspaper className="w-6 h-6 text-yellow-400" />
         <h3 className="text-xl font-semibold text-yellow-400">Current Affairs</h3>
       </div>
+
+      {hasChanges && (
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={saveProgress}
+            disabled={saving}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 px-3 py-1 rounded text-sm transition-colors"
+          >
+            <Save className="w-4 h-4" />
+            {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+          <button
+            onClick={resetChanges}
+            className="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 px-3 py-1 rounded text-sm transition-colors"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Reset
+          </button>
+        </div>
+      )}
 
       <div className="text-center mb-4">
         <div className="text-4xl font-bold text-yellow-400 mb-2">{progress}%</div>
@@ -44,7 +125,7 @@ export default function CurrentAffairsSection() {
           <span>Daily tracking</span>
         </div>
         <button
-          onClick={() => setCompleted(prev => Math.min(total, prev + 1))}
+          onClick={addOneTopic}
           className="text-xs bg-yellow-500/20 hover:bg-yellow-500/30 px-3 py-1 rounded transition-colors"
         >
           +1 Topic
@@ -69,11 +150,11 @@ export default function CurrentAffairsSection() {
             {Array.from({ length: total }, (_, i) => (
               <button
                 key={i}
-                onClick={() => handleCheckboxToggle(i, i >= completed)}
-                className="flex items-center justify-center p-1 hover:bg-white/10 rounded"
+                onClick={() => handleCheckboxToggle(i)}
+                className="flex items-center justify-center p-1 hover:bg-white/10 rounded transition-colors"
                 title={`Topic ${i + 1}`}
               >
-                {i < completed ? (
+                {topics[i] ? (
                   <CheckCircle className="w-3 h-3 text-green-400" />
                 ) : (
                   <Circle className="w-3 h-3 text-gray-400" />

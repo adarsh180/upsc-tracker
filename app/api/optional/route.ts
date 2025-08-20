@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getConnection } from '@/lib/db';
+import { getConnection, releaseConnection } from '@/lib/db';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
@@ -19,7 +21,7 @@ export async function GET() {
     const [rows] = await connection.execute(
       'SELECT * FROM optional_progress WHERE user_id = 1'
     );
-    await connection.end();
+    releaseConnection(connection);
     
     return NextResponse.json(Array.isArray(rows) ? rows : []);
   } catch (error) {
@@ -33,11 +35,28 @@ export async function PUT(request: NextRequest) {
     const { section_name, completed_items } = await request.json();
     
     const connection = await getConnection();
-    await connection.execute(
-      'INSERT INTO optional_progress (user_id, section_name, completed_items, total_items) VALUES (1, ?, ?, 140) ON DUPLICATE KEY UPDATE completed_items = ?',
-      [section_name, completed_items, completed_items]
+    
+    // First check if record exists
+    const [existing] = await connection.execute(
+      'SELECT id FROM optional_progress WHERE user_id = 1 AND section_name = ?',
+      [section_name]
     );
-    await connection.end();
+    
+    if (Array.isArray(existing) && existing.length > 0) {
+      // Update existing record
+      await connection.execute(
+        'UPDATE optional_progress SET completed_items = ? WHERE user_id = 1 AND section_name = ?',
+        [completed_items, section_name]
+      );
+    } else {
+      // Insert new record
+      await connection.execute(
+        'INSERT INTO optional_progress (user_id, section_name, completed_items, total_items) VALUES (1, ?, ?, 140)',
+        [section_name, completed_items]
+      );
+    }
+    
+    releaseConnection(connection);
     
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -1,27 +1,95 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, Circle, BookOpen, PenTool } from 'lucide-react';
+import { CheckCircle, Circle, BookOpen, PenTool, Save, RotateCcw } from 'lucide-react';
 import GlassCard from './GlassCard';
 import { calculateProgress } from '@/lib/utils';
 
 export default function EssaySection() {
-  const [lecturesCompleted, setLecturesCompleted] = useState(0);
-  const [essaysWritten, setEssaysWritten] = useState(0);
+  const [lectures, setLectures] = useState<boolean[]>(new Array(10).fill(false));
+  const [essays, setEssays] = useState<boolean[]>(new Array(100).fill(false));
+  const [savedLectures, setSavedLectures] = useState<boolean[]>(new Array(10).fill(false));
+  const [savedEssays, setSavedEssays] = useState<boolean[]>(new Array(100).fill(false));
   const [showSection, setShowSection] = useState<'lectures' | 'essays' | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetchProgress();
+  }, []);
+
+  const fetchProgress = async () => {
+    try {
+      const response = await fetch('/api/essay');
+      const data = await response.json();
+      
+      const newLectures = new Array(10).fill(false);
+      const newEssays = new Array(100).fill(false);
+      
+      for (let i = 0; i < (data.lectures_completed || 0); i++) {
+        newLectures[i] = true;
+      }
+      for (let i = 0; i < (data.essays_written || 0); i++) {
+        newEssays[i] = true;
+      }
+      
+      setLectures(newLectures);
+      setEssays(newEssays);
+      setSavedLectures([...newLectures]);
+      setSavedEssays([...newEssays]);
+    } catch (error) {
+      console.error('Failed to fetch essay progress:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveProgress = async () => {
+    setSaving(true);
+    try {
+      const lecturesCompleted = lectures.filter(Boolean).length;
+      const essaysWritten = essays.filter(Boolean).length;
+      
+      await fetch('/api/essay', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lectures_completed: lecturesCompleted,
+          essays_written: essaysWritten
+        })
+      });
+      
+      setSavedLectures([...lectures]);
+      setSavedEssays([...essays]);
+    } catch (error) {
+      console.error('Failed to save progress:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resetChanges = () => {
+    setLectures([...savedLectures]);
+    setEssays([...savedEssays]);
+  };
+
+  const hasChanges = JSON.stringify(lectures) !== JSON.stringify(savedLectures) || 
+                    JSON.stringify(essays) !== JSON.stringify(savedEssays);
 
   const totalLectures = 10;
   const totalEssays = 100;
+  const lecturesCompleted = lectures.filter(Boolean).length;
+  const essaysWritten = essays.filter(Boolean).length;
 
   const lectureProgress = calculateProgress(lecturesCompleted, totalLectures);
   const essayProgress = calculateProgress(essaysWritten, totalEssays);
 
-  const handleToggle = (type: 'lectures' | 'essays', index: number, checked: boolean) => {
+  const handleToggle = (type: 'lectures' | 'essays', index: number) => {
     if (type === 'lectures') {
-      setLecturesCompleted(prev => checked ? prev + 1 : Math.max(0, prev - 1));
+      setLectures(prev => prev.map((checked, i) => i === index ? !checked : checked));
     } else {
-      setEssaysWritten(prev => checked ? prev + 1 : Math.max(0, prev - 1));
+      setEssays(prev => prev.map((checked, i) => i === index ? !checked : checked));
     }
   };
 
@@ -31,6 +99,26 @@ export default function EssaySection() {
         <PenTool className="w-6 h-6 text-red-400" />
         <h3 className="text-xl font-semibold text-red-400">Essay Writing</h3>
       </div>
+
+      {hasChanges && (
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={saveProgress}
+            disabled={saving}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 px-3 py-1 rounded text-sm transition-colors"
+          >
+            <Save className="w-4 h-4" />
+            {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+          <button
+            onClick={resetChanges}
+            className="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 px-3 py-1 rounded text-sm transition-colors"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Reset
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div className="text-center">
@@ -98,15 +186,11 @@ export default function EssaySection() {
             }, (_, i) => (
               <button
                 key={i}
-                onClick={() => handleToggle(
-                  showSection, 
-                  i, 
-                  i >= (showSection === 'lectures' ? lecturesCompleted : essaysWritten)
-                )}
-                className="flex items-center justify-center p-1 hover:bg-white/10 rounded"
+                onClick={() => handleToggle(showSection, i)}
+                className="flex items-center justify-center p-1 hover:bg-white/10 rounded transition-colors"
                 title={`${showSection === 'lectures' ? 'Lecture' : 'Essay'} ${i + 1}`}
               >
-                {i < (showSection === 'lectures' ? lecturesCompleted : essaysWritten) ? (
+                {(showSection === 'lectures' ? lectures[i] : essays[i]) ? (
                   <CheckCircle className="w-3 h-3 text-green-400" />
                 ) : (
                   <Circle className="w-3 h-3 text-gray-400" />

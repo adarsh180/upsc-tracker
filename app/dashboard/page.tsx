@@ -12,6 +12,7 @@ import CurrentAffairsSection from '@/components/CurrentAffairsSection';
 import EssaySection from '@/components/EssaySection';
 import OptionalSection from '@/components/OptionalSection';
 import CategoryCard from '@/components/CategoryCard';
+import SpecialCategoryCard from '@/components/SpecialCategoryCard';
 import MoodCalendar from '@/components/MoodCalendar';
 import ProgressTrackerCard from '@/components/ProgressTrackerCard';
 import CountdownTimer from '@/components/CountdownTimer';
@@ -232,41 +233,30 @@ export default function Dashboard() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
       >
-        <Link href="/dashboard/current-affairs">
+        <Link href="/subjects/current-affairs">
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <CategoryCard
+            <SpecialCategoryCard
               category="CURRENT AFFAIRS"
-              subjects={[{ id: 999, subject: 'Current Affairs', category: 'CURRENT AFFAIRS', total_lectures: 300, completed_lectures: 0, total_dpps: 0, completed_dpps: 0, revisions: 0, updated_at: '' }]}
-              onUpdate={() => {}}
-              icon={<div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-sm">CA</div>}
-              color="text-blue-400"
+              icon={<div className="w-6 h-6 bg-yellow-600 rounded flex items-center justify-center text-white font-bold text-sm">CA</div>}
+              color="text-yellow-400"
             />
           </motion.div>
         </Link>
-        <Link href="/dashboard/essay">
+        <Link href="/subjects/essay">
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <CategoryCard
+            <SpecialCategoryCard
               category="ESSAY"
-              subjects={[{ id: 998, subject: 'Essay Writing', category: 'ESSAY', total_lectures: 10, completed_lectures: 0, total_dpps: 100, completed_dpps: 0, revisions: 0, updated_at: '' }]}
-              onUpdate={() => {}}
-              icon={<div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-sm">E</div>}
-              color="text-blue-400"
+              icon={<div className="w-6 h-6 bg-red-600 rounded flex items-center justify-center text-white font-bold text-sm">E</div>}
+              color="text-red-400"
             />
           </motion.div>
         </Link>
-        <Link href="/dashboard/optional">
+        <Link href="/subjects/optional">
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <CategoryCard
+            <SpecialCategoryCard
               category="OPTIONAL"
-              subjects={[
-                { id: 997, subject: 'Lectures', category: 'OPTIONAL', total_lectures: 140, completed_lectures: 0, total_dpps: 0, completed_dpps: 0, revisions: 0, updated_at: '' },
-                { id: 996, subject: 'Answer Writing', category: 'OPTIONAL', total_lectures: 140, completed_lectures: 0, total_dpps: 0, completed_dpps: 0, revisions: 0, updated_at: '' },
-                { id: 995, subject: 'PYQ', category: 'OPTIONAL', total_lectures: 140, completed_lectures: 0, total_dpps: 0, completed_dpps: 0, revisions: 0, updated_at: '' },
-                { id: 994, subject: 'Tests', category: 'OPTIONAL', total_lectures: 140, completed_lectures: 0, total_dpps: 0, completed_dpps: 0, revisions: 0, updated_at: '' }
-              ]}
-              onUpdate={() => {}}
-              icon={<div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-sm">O</div>}
-              color="text-blue-400"
+              icon={<div className="w-6 h-6 bg-purple-600 rounded flex items-center justify-center text-white font-bold text-sm">O</div>}
+              color="text-purple-400"
             />
           </motion.div>
         </Link>
