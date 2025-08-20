@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Plus, BarChart3, Calendar, BookOpen, FileText, Target } from 'lucide-react';
+import { Plus, BarChart3, Calendar, BookOpen, FileText, Target, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import SubjectCard from '@/components/SubjectCard';
 import GlassCard from '@/components/GlassCard';
@@ -33,6 +33,11 @@ export default function Dashboard() {
       return;
     }
   }, [router]);
+
+  const handleSignOut = () => {
+    localStorage.removeItem('authenticated');
+    router.push('/');
+  };
 
   useEffect(() => {
     initializeApp();
@@ -113,7 +118,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-6">
+    <div className="min-h-screen p-4 md:p-6 bg-gradient-to-br from-gray-950 via-gray-900 to-black">
       {/* Header */}
       <motion.div
         className="mb-8"
@@ -128,15 +133,20 @@ export default function Dashboard() {
           
           <div className="flex gap-4">
             <Link href="/dashboard/tests">
-              <GlassCard className="p-3 cursor-pointer hover:scale-105 transition-transform">
+              <GlassCard className="p-3 cursor-pointer">
                 <BarChart3 className="w-6 h-6 text-blue-400" />
               </GlassCard>
             </Link>
             <Link href="/dashboard/goals">
-              <GlassCard className="p-3 cursor-pointer hover:scale-105 transition-transform">
+              <GlassCard className="p-3 cursor-pointer">
                 <Calendar className="w-6 h-6 text-purple-400" />
               </GlassCard>
             </Link>
+            <button onClick={handleSignOut}>
+              <GlassCard className="p-3 cursor-pointer bg-red-500/10 border-red-500/20">
+                <LogOut className="w-6 h-6 text-red-400" />
+              </GlassCard>
+            </button>
           </div>
         </div>
 

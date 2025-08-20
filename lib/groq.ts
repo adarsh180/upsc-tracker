@@ -4,6 +4,8 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
+export { groq };
+
 export async function getPersonalizedInsights(progressData: any) {
   try {
     const completion = await groq.chat.completions.create({

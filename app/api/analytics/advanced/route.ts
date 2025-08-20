@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getConnection } from '@/lib/db';
+import { groq } from '@/lib/groq';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,12 +19,12 @@ export async function GET() {
     const testsArray = Array.isArray(tests) ? tests as any[] : [];
 
     const analytics = {
-      performancePrediction: calculatePerformancePrediction(subjectsArray, goalsArray, testsArray),
-      weakAreas: identifyWeakAreas(subjectsArray, testsArray),
+      performancePrediction: await getAIPerformancePrediction(subjectsArray, goalsArray, testsArray),
+      weakAreas: await getAIWeakAreas(subjectsArray, testsArray),
       studyPatterns: analyzeStudyPatterns(goalsArray),
-      timeAllocation: recommendTimeAllocation(subjectsArray, goalsArray),
+      timeAllocation: await getAITimeAllocation(subjectsArray, goalsArray),
       achievements: generateAchievements(subjectsArray, goalsArray),
-      reminders: generateReminders(subjectsArray, goalsArray)
+      reminders: await getAIReminders(subjectsArray, goalsArray)
     };
 
     return NextResponse.json(analytics);
@@ -40,36 +41,62 @@ export async function GET() {
   }
 }
 
-function calculatePerformancePrediction(subjects: any[], goals: any[], tests: any[]) {
-  const totalProgress = subjects.reduce((sum, s) => {
-    const lectureProgress = (s.completed_lectures / s.total_lectures) * 100;
-    const dppProgress = (s.completed_dpps / s.total_dpps) * 100;
-    return sum + (lectureProgress + dppProgress) / 2;
-  }, 0) / subjects.length;
+async function getAIPerformancePrediction(subjects: any[], goals: any[], tests: any[]) {
+  try {
+    const prompt = `Analyze UPSC preparation data and predict performance:
 
-  const recentStudyHours = goals.slice(0, 7).reduce((sum, g) => sum + parseFloat(g.hours_studied || 0), 0);
-  const avgTestScore = tests.length > 0 ? tests.reduce((sum, t) => sum + (t.scored_marks / t.total_marks * 100), 0) / tests.length : 0;
+Subjects Progress: ${JSON.stringify(subjects.map(s => ({
+      subject: s.subject,
+      lectureProgress: Math.round((s.completed_lectures / s.total_lectures) * 100),
+      dppProgress: Math.round((s.completed_dpps / s.total_dpps) * 100)
+    })))}
 
-  const predictedScore = (totalProgress * 0.4) + (recentStudyHours * 2) + (avgTestScore * 0.3);
-  
-  return {
-    score: Math.min(Math.round(predictedScore), 100),
-    trend: recentStudyHours > 20 ? 'improving' : recentStudyHours > 10 ? 'stable' : 'declining',
-    confidence: Math.min(tests.length * 5 + goals.length, 100)
-  };
+Recent Study Hours: ${goals.slice(0, 7).reduce((sum, g) => sum + parseFloat(g.hours_studied || 0), 0)} hours in last 7 days
+
+Test Scores: ${tests.map(t => Math.round((t.scored_marks / t.total_marks) * 100)).join(', ')}%
+
+Predict UPSC exam performance score (0-100), trend (improving/stable/declining), and confidence (0-100). Respond in JSON format: {"score": number, "trend": string, "confidence": number, "reasoning": string}`;
+
+    const response = await groq.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      model: 'mixtral-8x7b-32768',
+      temperature: 0.3
+    });
+
+    const result = JSON.parse(response.choices[0]?.message?.content || '{}');
+    return {
+      score: result.score || 0,
+      trend: result.trend || 'stable',
+      confidence: result.confidence || 0,
+      reasoning: result.reasoning || 'AI analysis based on study patterns'
+    };
+  } catch (error) {
+    return { score: 0, trend: 'stable', confidence: 0, reasoning: 'AI analysis unavailable' };
+  }
 }
 
-function identifyWeakAreas(subjects: any[], tests: any[]) {
-  return subjects
-    .map(s => ({
+async function getAIWeakAreas(subjects: any[], tests: any[]) {
+  try {
+    const prompt = `Identify weak areas in UPSC preparation:
+
+Subjects: ${JSON.stringify(subjects.map(s => ({
       subject: s.subject,
       category: s.category,
-      progress: ((s.completed_lectures / s.total_lectures) + (s.completed_dpps / s.total_dpps)) / 2 * 100,
-      priority: s.completed_lectures < s.total_lectures * 0.3 ? 'high' : 'medium'
-    }))
-    .filter(s => s.progress < 50)
-    .sort((a, b) => a.progress - b.progress)
-    .slice(0, 5);
+      progress: Math.round(((s.completed_lectures / s.total_lectures) + (s.completed_dpps / s.total_dpps)) / 2 * 100)
+    })))}
+
+Identify top 3 weak areas that need immediate attention. Consider progress percentage and UPSC exam weightage. Respond in JSON format: [{"subject": string, "category": string, "progress": number, "priority": "high/medium/low", "reason": string}]`;
+
+    const response = await groq.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      model: 'mixtral-8x7b-32768',
+      temperature: 0.3
+    });
+
+    return JSON.parse(response.choices[0]?.message?.content || '[]');
+  } catch (error) {
+    return subjects.filter(s => ((s.completed_lectures / s.total_lectures) + (s.completed_dpps / s.total_dpps)) / 2 * 100 < 50).slice(0, 3);
+  }
 }
 
 function analyzeStudyPatterns(goals: any[]) {
@@ -83,21 +110,31 @@ function analyzeStudyPatterns(goals: any[]) {
   };
 }
 
-function recommendTimeAllocation(subjects: any[], goals: any[]) {
-  const totalStudyTime = 8;
-  
-  return subjects.map(s => {
-    const progress = ((s.completed_lectures / s.total_lectures) + (s.completed_dpps / s.total_dpps)) / 2;
-    const weight = progress < 0.3 ? 1.5 : progress < 0.6 ? 1.2 : 1.0;
-    const recommendedHours = (totalStudyTime / subjects.length) * weight;
-    
-    return {
+async function getAITimeAllocation(subjects: any[], goals: any[]) {
+  try {
+    const prompt = `Recommend optimal time allocation for UPSC preparation:
+
+Subjects: ${JSON.stringify(subjects.map(s => ({
       subject: s.subject,
       category: s.category,
-      recommendedHours: Math.round(recommendedHours * 10) / 10,
-      reason: progress < 0.3 ? 'Behind schedule' : progress < 0.6 ? 'Needs attention' : 'On track'
-    };
-  });
+      progress: Math.round(((s.completed_lectures / s.total_lectures) + (s.completed_dpps / s.total_dpps)) / 2 * 100)
+    })))}
+
+Total daily study time: 8 hours
+Recent study pattern: ${goals.slice(0, 7).reduce((sum, g) => sum + parseFloat(g.hours_studied || 0), 0)} hours in last 7 days
+
+Recommend daily hours for each subject considering UPSC exam weightage and current progress. Respond in JSON format: [{"subject": string, "category": string, "recommendedHours": number, "reason": string}]`;
+
+    const response = await groq.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      model: 'mixtral-8x7b-32768',
+      temperature: 0.3
+    });
+
+    return JSON.parse(response.choices[0]?.message?.content || '[]');
+  } catch (error) {
+    return subjects.map(s => ({ subject: s.subject, category: s.category, recommendedHours: 1.5, reason: 'Standard allocation' }));
+  }
 }
 
 function generateAchievements(subjects: any[], goals: any[]) {
@@ -116,29 +153,27 @@ function generateAchievements(subjects: any[], goals: any[]) {
   return achievements;
 }
 
-function generateReminders(subjects: any[], goals: any[]) {
-  const reminders = [];
-  const today = new Date();
-  
-  const todayActivity = goals.some(g => g.date === today.toISOString().split('T')[0]);
-  if (!todayActivity) {
-    reminders.push({
-      type: 'study',
-      message: 'Time to start your daily study session!',
-      priority: 'high'
+async function getAIReminders(subjects: any[], goals: any[]) {
+  try {
+    const prompt = `Generate personalized study reminders for UPSC preparation:
+
+Subjects Progress: ${JSON.stringify(subjects.map(s => ({
+      subject: s.subject,
+      progress: Math.round(((s.completed_lectures / s.total_lectures) + (s.completed_dpps / s.total_dpps)) / 2 * 100)
+    })))}
+
+Recent Study Activity: ${goals.slice(0, 3).map(g => `${g.date}: ${g.hours_studied}h`).join(', ')}
+
+Generate 3-5 personalized study reminders considering progress gaps and UPSC exam timeline. Respond in JSON format: [{"type": string, "message": string, "priority": "high/medium/low"}]`;
+
+    const response = await groq.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      model: 'mixtral-8x7b-32768',
+      temperature: 0.7
     });
+
+    return JSON.parse(response.choices[0]?.message?.content || '[]');
+  } catch (error) {
+    return [{ type: 'study', message: 'Continue your preparation consistently!', priority: 'medium' }];
   }
-  
-  subjects.forEach(s => {
-    const progress = (s.completed_lectures / s.total_lectures) * 100;
-    if (progress < 30) {
-      reminders.push({
-        type: 'subject',
-        message: `${s.subject} needs attention - only ${Math.round(progress)}% complete`,
-        priority: 'medium'
-      });
-    }
-  });
-  
-  return reminders;
 }

@@ -20,7 +20,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-gray-950 via-gray-900 to-black">
       {/* Hero Section */}
       <motion.div
         className="text-center mb-12"
@@ -106,7 +106,7 @@ export default function HomePage() {
       >
         <button onClick={handleDashboardAccess}>
           <GlassCard className="inline-flex items-center gap-3 px-8 py-4 cursor-pointer neon-glow hover:shadow-blue-500/70 transition-all duration-300">
-            <span className="text-xl font-semibold">Enter Dashboard</span>
+            <span className="text-xl font-semibold">Get Started</span>
             <ArrowRight className="w-6 h-6" />
           </GlassCard>
         </button>
