@@ -283,7 +283,7 @@ export default function PredictionCard() {
                           dataKey="progress"
                           label={({ subject, progress }) => `${subject}: ${progress}%`}
                         >
-                          {subjectData.map((entry, index) => (
+                          {subjectData.map((entry: any, index: number) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
