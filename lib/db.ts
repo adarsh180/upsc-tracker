@@ -5,8 +5,8 @@ export async function getConnection() {
 }
 
 export function releaseConnection(connection: any) {
-  if (connection && connection.release) {
-    connection.release();
+  if (connection && connection.end) {
+    connection.end();
   }
 }
 
