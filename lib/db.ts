@@ -65,7 +65,7 @@ export async function initDatabase() {
         total_topics INT DEFAULT 300,
         completed_topics INT DEFAULT 0,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id)
+        UNIQUE KEY unique_user (user_id)
       )
     `);
 
@@ -79,7 +79,7 @@ export async function initDatabase() {
         total_lectures INT DEFAULT 10,
         total_essays INT DEFAULT 100,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id)
+        UNIQUE KEY unique_user (user_id)
       )
     `);
 

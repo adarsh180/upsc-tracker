@@ -232,8 +232,8 @@ export default function EssaySubjectsPage() {
                     <Circle className="w-3 h-3 text-gray-400" />
                   )}
                 </button>
-              ))
-             } </div>
+              ))}
+            </div>
           )}
         </GlassCard>
       </div>

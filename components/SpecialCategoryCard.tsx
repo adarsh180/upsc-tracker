@@ -43,9 +43,9 @@ export default function SpecialCategoryCard({ category, icon, color }: SpecialCa
         
         if (Array.isArray(data) && data.length > 0) {
           const totalCompleted = data.reduce((sum, item) => sum + (item.completed_items || 0), 0);
-          const totalItems = data.length * 140;
+          const totalItems = 4 * 140; // 4 sections × 140 items each
           lectureProgress = calculateProgress(totalCompleted, totalItems);
-          dppProgress = lectureProgress;
+          dppProgress = lectureProgress; // Same progress for both
         }
       }
 

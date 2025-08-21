@@ -14,7 +14,8 @@ export async function GET() {
         section_name VARCHAR(100),
         total_items INT DEFAULT 140,
         completed_items INT DEFAULT 0,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_user_section (user_id, section_name)
       )
     `);
     

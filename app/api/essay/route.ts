@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getConnection } from '@/lib/db';
+import { getConnection, releaseConnection } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +25,7 @@ export async function GET() {
     const [rows] = await connection.execute(
       'SELECT * FROM essay_progress WHERE user_id = 1'
     );
-    await connection.end();
+    releaseConnection(connection);
     
     const result = Array.isArray(rows) ? rows[0] : null;
     return NextResponse.json(result || { lectures_completed: 0, essays_written: 0, total_lectures: 10, total_essays: 100 });
@@ -44,7 +44,7 @@ export async function PUT(request: NextRequest) {
       'INSERT INTO essay_progress (user_id, lectures_completed, essays_written, total_lectures, total_essays) VALUES (1, ?, ?, 10, 100) ON DUPLICATE KEY UPDATE lectures_completed = ?, essays_written = ?',
       [lectures_completed, essays_written, lectures_completed, essays_written]
     );
-    await connection.end();
+    releaseConnection(connection);
     
     return NextResponse.json({ success: true });
   } catch (error) {
