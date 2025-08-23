@@ -87,99 +87,44 @@ export default function CurrentAffairsSubjectsPage() {
   const progress = calculateProgress(completed, total);
 
   return (
-    <div className="min-h-screen p-6 md:p-8 lg:p-12 max-w-7xl mx-auto">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-yellow-500/5 rounded-full blur-3xl animate-pulse-slow" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '1s' }} />
-      </div>
-
+    <div className="min-h-screen p-6">
       <motion.div
-        className="mb-12 relative z-10"
-        initial={{ opacity: 0, y: -30 }}
+        className="mb-8"
+        initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
       >
-        <div className="flex items-center gap-6 mb-8">
+        <div className="flex items-center gap-4 mb-6">
           <Link href="/dashboard">
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <GlassCard 
-                className="p-3 cursor-pointer bg-gradient-to-br from-yellow-500/10 to-amber-500/5 border-yellow-400/20 hover:border-yellow-400/30"
-                size="sm"
-              >
-                <ArrowLeft className="w-5 h-5 text-yellow-400" />
-              </GlassCard>
-            </motion.div>
+            <GlassCard className="p-2 cursor-pointer hover:scale-105 transition-transform">
+              <ArrowLeft className="w-5 h-5" />
+            </GlassCard>
           </Link>
-          
-          <div className="flex-1">
-            <motion.div
-              className="flex items-center gap-4 mb-3"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <div className="p-3 rounded-2xl bg-gradient-to-br from-yellow-500/20 to-amber-500/20 border border-yellow-400/20">
-                <div className="w-8 h-8 bg-yellow-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">CA</div>
-              </div>
-              <div>
-                <h1 className="text-5xl md:text-6xl font-black gradient-text-warning tracking-tight">
-                  Current Affairs
-                </h1>
-                <p className="text-lg text-neutral-300 mt-2 leading-relaxed">
-                  Daily News • Monthly Compilations • Important Events • Government Schemes
-                </p>
-              </div>
-            </motion.div>
-            
-            <motion.div
-              className="flex items-center gap-2 text-sm text-neutral-500"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-            >
-              <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
-              <span>300 topics • Daily tracking • Live updates</span>
-            </motion.div>
+          <div>
+            <h1 className="text-4xl font-bold gradient-text">Current Affairs</h1>
+            <p className="text-gray-300 mt-2">Track 300 current affairs topics</p>
           </div>
         </div>
       </motion.div>
 
-      <motion.div
-        className="relative z-10"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-      >
-        <GlassCard className="bg-gradient-to-br from-yellow-500/10 to-amber-500/5 border-yellow-400/20" variant="premium">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-2xl bg-gradient-to-br from-yellow-500/20 to-amber-500/20 border border-yellow-400/20">
-                <Newspaper className="w-8 h-8 text-yellow-400" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold text-yellow-400">Progress Tracking</h3>
-                <p className="text-sm text-neutral-400">Daily current affairs coverage</p>
-              </div>
-            </div>
-            
-            <div className="text-right">
-              <div className="text-4xl font-black text-yellow-400 mb-1">{progress}%</div>
-              <div className="text-sm text-neutral-400">{completed}/{total} topics</div>
-            </div>
-          </div>
+      <GlassCard>
+        <div className="flex items-center gap-3 mb-6">
+          <Newspaper className="w-6 h-6 text-blue-400" />
+          <h3 className="text-xl font-semibold text-blue-400">Current Affairs Progress</h3>
+        </div>
 
-          <div className="progress-bar h-3 mb-8">
-            <motion.div
-              className="progress-fill h-full bg-gradient-to-r from-yellow-500 to-amber-500"
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 1.5, ease: "easeOut", delay: 0.8 }}
-            />
-          </div>
+        <div className="text-center mb-6">
+          <div className="text-6xl font-bold text-blue-400 mb-2">{progress}%</div>
+          <div className="text-lg text-gray-400">{completed}/{total} topics completed</div>
+        </div>
+
+        <div className="w-full bg-gray-700 rounded-full h-4 mb-6">
+          <motion.div
+            className="bg-gradient-to-r from-blue-400 to-blue-600 h-4 rounded-full"
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 1, ease: "easeOut" }}
+          />
+        </div>
 
         {hasChanges && (
           <div className="flex gap-2 mb-6">
@@ -228,9 +173,8 @@ export default function CurrentAffairsSubjectsPage() {
                 <Circle className="w-4 h-4 text-gray-400" />
               )}
             </button>
-          ))
-}
-</div>
+          ))}
+        </div>
       </GlassCard>
     </div>
   );
