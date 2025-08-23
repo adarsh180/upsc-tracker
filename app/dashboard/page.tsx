@@ -120,60 +120,110 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-6 bg-gradient-to-br from-gray-950 via-gray-900 to-black">
+    <div className="min-h-screen p-6 md:p-8 lg:p-12 max-w-7xl mx-auto">
       {/* Header */}
       <motion.div
-        className="mb-8"
+        className="mb-12"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-4xl font-bold gradient-text">Dashboard</h1>
-            <p className="text-gray-300 mt-2">Track your UPSC CSE preparation progress</p>
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-6 mb-8">
+          <div className="space-y-3">
+            <motion.h1 
+              className="text-5xl md:text-6xl font-black gradient-text tracking-tight"
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              Dashboard
+            </motion.h1>
+            <motion.p 
+              className="text-xl text-neutral-300 leading-relaxed"
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              Your elite preparation command center
+            </motion.p>
+            <motion.div
+              className="flex items-center gap-2 text-sm text-neutral-500"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+            >
+              <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+              <span>Live tracking • Real-time analytics</span>
+            </motion.div>
           </div>
           
-          <div className="flex gap-4">
+          <motion.div 
+            className="flex gap-3"
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.5 }}
+          >
             <Link href="/dashboard/tests">
-              <GlassCard className="p-3 cursor-pointer">
-                <BarChart3 className="w-6 h-6 text-blue-400" />
+              <GlassCard 
+                className="p-4 cursor-pointer bg-gradient-to-br from-indigo-500/10 to-blue-500/5 border-indigo-400/20 hover:border-indigo-400/30 group"
+                size="sm"
+                hover={true}
+              >
+                <BarChart3 className="w-6 h-6 text-indigo-400 group-hover:text-indigo-300 transition-colors" />
               </GlassCard>
             </Link>
             <Link href="/dashboard/goals">
-              <GlassCard className="p-3 cursor-pointer">
-                <Calendar className="w-6 h-6 text-purple-400" />
+              <GlassCard 
+                className="p-4 cursor-pointer bg-gradient-to-br from-purple-500/10 to-pink-500/5 border-purple-400/20 hover:border-purple-400/30 group"
+                size="sm"
+                hover={true}
+              >
+                <Calendar className="w-6 h-6 text-purple-400 group-hover:text-purple-300 transition-colors" />
               </GlassCard>
             </Link>
             <button onClick={handleSignOut}>
-              <GlassCard className="p-3 cursor-pointer bg-red-500/10 border-red-500/20">
-                <LogOut className="w-6 h-6 text-red-400" />
+              <GlassCard 
+                className="p-4 cursor-pointer bg-gradient-to-br from-red-500/10 to-pink-500/5 border-red-400/20 hover:border-red-400/30 group"
+                size="sm"
+                hover={true}
+              >
+                <LogOut className="w-6 h-6 text-red-400 group-hover:text-red-300 transition-colors" />
               </GlassCard>
             </button>
-          </div>
+          </motion.div>
         </div>
 
-        {/* Countdown Timers & Motivation */}
-        <div className="grid md:grid-cols-2 gap-6 mb-4">
+        {/* Countdown Timers */}
+        <motion.div 
+          className="grid md:grid-cols-2 gap-8 mb-10"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+        >
           <CountdownTimer
             examName="UPSC CSE Prelims 2026"
             examDate="2026-05-24T00:00:00"
-            color="text-blue-400"
+            color="text-indigo-400"
           />
           <CountdownTimer
             examName="UPSC CSE Mains 2026"
             examDate="2026-08-21T00:00:00"
-            color="text-blue-400"
+            color="text-purple-400"
           />
-        </div>
+        </motion.div>
         
         {/* Motivation Banner */}
-        <div className="mb-8">
+        <motion.div 
+          className="mb-12"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+        >
           <MotivationCard />
-        </div>
+        </motion.div>
       </motion.div>
 
       {/* Category Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
         {Object.entries(groupedSubjects).map(([category, categorySubjects], categoryIndex) => {
           const categoryConfig = {
             'GS1': { icon: <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-sm">1</div>, color: 'text-blue-400' },
@@ -208,7 +258,7 @@ export default function Dashboard() {
 
       {/* AI Insights */}
       <motion.div
-        className="mb-6 md:mb-8"
+        className="mb-12"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
@@ -218,7 +268,7 @@ export default function Dashboard() {
 
       {/* AI Prediction Card */}
       <motion.div
-        className="mb-6 md:mb-8"
+        className="mb-12"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
@@ -228,7 +278,7 @@ export default function Dashboard() {
 
       {/* Special Sections */}
       <motion.div
-        className="grid lg:grid-cols-2 gap-6 mt-8"
+        className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 mt-12"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
@@ -264,7 +314,7 @@ export default function Dashboard() {
 
       {/* Progress */}
       <motion.div
-        className="mt-8 mb-8"
+        className="mt-12 mb-12"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
@@ -274,7 +324,7 @@ export default function Dashboard() {
 
       {/* Mood Calendar */}
       <motion.div
-        className="mt-8"
+        className="mt-12"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.7 }}
