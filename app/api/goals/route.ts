@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getConnection } from '@/lib/db';
+import { getConnection, releaseConnection } from '@/lib/db';
+
+export const dynamic = 'force-dynamic';
+
+// Helper function to get current IST date
+function getCurrentISTDate() {
+  const now = new Date();
+  const istOffset = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
+  const istTime = new Date(now.getTime() + istOffset);
+  return istTime.toISOString().split('T')[0];
+}
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const date = searchParams.get('date') || new Date().toISOString().split('T')[0];
+    const date = searchParams.get('date') || getCurrentISTDate();
     
     const connection = await getConnection();
     
@@ -27,7 +37,7 @@ export async function GET(request: NextRequest) {
       'SELECT * FROM daily_goals WHERE user_id = 1 AND date = ? ORDER BY created_at DESC',
       [date]
     );
-    await connection.end();
+    releaseConnection(connection);
     
     return NextResponse.json(rows || []);
   } catch (error) {
@@ -47,7 +57,7 @@ export async function POST(request: NextRequest) {
       'INSERT INTO daily_goals (user_id, date, subject, hours_studied, topics_covered, questions_solved, notes) VALUES (1, ?, ?, ?, ?, ?, ?)',
       [date, subject, hours_studied || 0, topics_covered || 0, questions_solved || 0, notes || '']
     );
-    await connection.end();
+    releaseConnection(connection);
     
     return NextResponse.json({ success: true, id: (result as any).insertId });
   } catch (error) {
@@ -66,7 +76,7 @@ export async function PUT(request: NextRequest) {
       'UPDATE daily_goals SET subject = ?, hours_studied = ?, topics_covered = ?, questions_solved = ?, notes = ? WHERE id = ?',
       [subject, hours_studied, topics_covered, questions_solved || 0, notes, id]
     );
-    await connection.end();
+    releaseConnection(connection);
     
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -82,7 +92,7 @@ export async function DELETE(request: NextRequest) {
     
     const connection = await getConnection();
     await connection.execute('DELETE FROM daily_goals WHERE id = ?', [id]);
-    await connection.end();
+    releaseConnection(connection);
     
     return NextResponse.json({ success: true });
   } catch (error) {

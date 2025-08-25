@@ -8,9 +8,17 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import GlassCard from '@/components/GlassCard';
 import { DailyGoal } from '@/types';
 
+// Helper function to get current IST date
+function getCurrentISTDate() {
+  const now = new Date();
+  const istOffset = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
+  const istTime = new Date(now.getTime() + istOffset);
+  return istTime.toISOString().split('T')[0];
+}
+
 export default function GoalsPage() {
   const [goals, setGoals] = useState<DailyGoal[]>([]);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(getCurrentISTDate());
   const [showAddForm, setShowAddForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
