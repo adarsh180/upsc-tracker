@@ -312,12 +312,17 @@ export default function MoodCalendar() {
           <div className="space-y-3">
             {[
               { mood: 'happy', emoji: '😊', label: 'Happy', color: 'bg-green-500' },
-              { mood: 'productive', emoji: '💪', label: 'Productive', color: 'bg-blue-500' },
-              { mood: 'energetic', emoji: '⚡', label: 'Energetic', color: 'bg-purple-500' },
+              { mood: 'excited', emoji: '🤩', label: 'Excited', color: 'bg-orange-500' },
+              { mood: 'motivated', emoji: '💪', label: 'Motivated', color: 'bg-blue-500' },
+              { mood: 'confident', emoji: '😎', label: 'Confident', color: 'bg-purple-500' },
               { mood: 'neutral', emoji: '😐', label: 'Neutral', color: 'bg-yellow-500' },
-              { mood: 'tired', emoji: '😴', label: 'Tired', color: 'bg-orange-500' },
-              { mood: 'stressed', emoji: '😰', label: 'Stressed', color: 'bg-pink-500' },
-              { mood: 'sad', emoji: '😢', label: 'Sad', color: 'bg-red-500' }
+              { mood: 'tired', emoji: '😴', label: 'Tired', color: 'bg-gray-500' },
+              { mood: 'stressed', emoji: '😰', label: 'Stressed', color: 'bg-red-500' },
+              { mood: 'frustrated', emoji: '😤', label: 'Frustrated', color: 'bg-red-600' },
+              { mood: 'sad', emoji: '😢', label: 'Sad', color: 'bg-blue-600' },
+              { mood: 'anxious', emoji: '😟', label: 'Anxious', color: 'bg-yellow-600' },
+              { mood: 'overwhelmed', emoji: '🤯', label: 'Overwhelmed', color: 'bg-red-700' },
+              { mood: 'bored', emoji: '😑', label: 'Bored', color: 'bg-gray-600' }
             ].map(({ mood, emoji, label, color }) => (
               <motion.button
                 key={mood}

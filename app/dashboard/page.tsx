@@ -164,20 +164,29 @@ export default function Dashboard() {
           >
             <Link href="/dashboard/tests">
               <GlassCard 
-                className="p-4 cursor-pointer bg-gradient-to-br from-indigo-500/10 to-blue-500/5 border-indigo-400/20 hover:border-indigo-400/30 group"
+                className="px-4 py-2 cursor-pointer bg-gradient-to-br from-indigo-500/10 to-blue-500/5 border-indigo-400/20 hover:border-indigo-400/30 group"
                 size="sm"
                 hover={true}
               >
-                <BarChart3 className="w-6 h-6 text-indigo-400 group-hover:text-indigo-300 transition-colors" />
+                <span className="text-sm font-medium text-indigo-400 group-hover:text-indigo-300 transition-colors">Tests</span>
               </GlassCard>
             </Link>
             <Link href="/dashboard/goals">
               <GlassCard 
-                className="p-4 cursor-pointer bg-gradient-to-br from-purple-500/10 to-pink-500/5 border-purple-400/20 hover:border-purple-400/30 group"
+                className="px-4 py-2 cursor-pointer bg-gradient-to-br from-purple-500/10 to-pink-500/5 border-purple-400/20 hover:border-purple-400/30 group"
                 size="sm"
                 hover={true}
               >
-                <Calendar className="w-6 h-6 text-purple-400 group-hover:text-purple-300 transition-colors" />
+                <span className="text-sm font-medium text-purple-400 group-hover:text-purple-300 transition-colors">Goals</span>
+              </GlassCard>
+            </Link>
+            <Link href="/dashboard/analysis">
+              <GlassCard 
+                className="px-4 py-2 cursor-pointer bg-gradient-to-br from-green-500/10 to-emerald-500/5 border-green-400/20 hover:border-green-400/30 group"
+                size="sm"
+                hover={true}
+              >
+                <span className="text-sm font-medium text-green-400 group-hover:text-green-300 transition-colors">Analysis</span>
               </GlassCard>
             </Link>
             <button onClick={handleSignOut}>
