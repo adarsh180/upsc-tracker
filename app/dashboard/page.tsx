@@ -319,6 +319,15 @@ export default function Dashboard() {
             />
           </motion.div>
         </Link>
+        <Link href="/subjects/psir">
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <SpecialCategoryCard
+              category="PSIR"
+              icon={<div className="w-6 h-6 bg-indigo-600 rounded flex items-center justify-center text-white font-bold text-sm">P</div>}
+              color="text-indigo-400"
+            />
+          </motion.div>
+        </Link>
       </motion.div>
 
       {/* Progress */}

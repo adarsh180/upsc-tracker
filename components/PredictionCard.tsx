@@ -98,11 +98,11 @@ export default function PredictionCard() {
                   <motion.div
                     className="bg-gradient-to-r from-blue-400 to-purple-400 h-2 rounded-full"
                     initial={{ width: 0 }}
-                    animate={{ width: `${analytics.performancePrediction.confidence}%` }}
-                    transition={{ duration: 1.5 }}
+                    animate={{ width: `${Math.min(Math.max(analytics.performancePrediction.confidence || 0, 0), 100)}%` }}
+                    transition={{ duration: 1.5, ease: "easeOut" }}
                   />
                 </div>
-                <span className="text-sm text-purple-400">{analytics.performancePrediction.confidence}%</span>
+                <span className="text-sm text-purple-400">{Math.min(Math.max(analytics.performancePrediction.confidence || 0, 0), 100)}%</span>
               </div>
 
               <div className="text-xs text-gray-400 bg-white/5 rounded p-2">

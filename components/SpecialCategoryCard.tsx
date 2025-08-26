@@ -7,7 +7,7 @@ import GlassCard from './GlassCard';
 import { calculateProgress } from '@/lib/utils';
 
 interface SpecialCategoryCardProps {
-  category: 'CURRENT AFFAIRS' | 'ESSAY' | 'OPTIONAL';
+  category: 'CURRENT AFFAIRS' | 'ESSAY' | 'OPTIONAL' | 'PSIR';
   icon: React.ReactNode;
   color: string;
 }
@@ -44,6 +44,16 @@ export default function SpecialCategoryCard({ category, icon, color }: SpecialCa
         if (Array.isArray(data) && data.length > 0) {
           const totalCompleted = data.reduce((sum, item) => sum + (item.completed_items || 0), 0);
           const totalItems = 4 * 140; // 4 sections × 140 items each
+          lectureProgress = calculateProgress(totalCompleted, totalItems);
+          dppProgress = lectureProgress; // Same progress for both
+        }
+      } else if (category === 'PSIR') {
+        const response = await fetch('/api/psir');
+        const data = await response.json();
+        
+        if (Array.isArray(data) && data.length > 0) {
+          const totalCompleted = data.reduce((sum, item) => sum + (item.completed_items || 0), 0);
+          const totalItems = 4 * 150; // 4 sections × 150 items each
           lectureProgress = calculateProgress(totalCompleted, totalItems);
           dppProgress = lectureProgress; // Same progress for both
         }
@@ -109,6 +119,7 @@ export default function SpecialCategoryCard({ category, icon, color }: SpecialCa
   const getDescription = () => {
     if (category === 'CURRENT AFFAIRS') return '300 topics • Daily updates';
     if (category === 'ESSAY') return '10 lectures • 100 practice essays';
+    if (category === 'PSIR') return '4 sections • 150 items each';
     return '4 sections • 140 items each';
   };
 
