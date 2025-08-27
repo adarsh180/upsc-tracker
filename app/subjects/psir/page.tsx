@@ -12,6 +12,8 @@ interface PSIRData {
   comparativePolitics: boolean[];
   publicAdministration: boolean[];
   internationalRelations: boolean[];
+  lectures: boolean[];
+  tests: boolean[];
 }
 
 export default function PSIRSubjectsPage() {
@@ -19,13 +21,17 @@ export default function PSIRSubjectsPage() {
     politicalTheory: new Array(150).fill(false),
     comparativePolitics: new Array(150).fill(false),
     publicAdministration: new Array(150).fill(false),
-    internationalRelations: new Array(150).fill(false)
+    internationalRelations: new Array(150).fill(false),
+    lectures: new Array(250).fill(false),
+    tests: new Array(500).fill(false)
   });
   const [savedProgress, setSavedProgress] = useState<PSIRData>({
     politicalTheory: new Array(150).fill(false),
     comparativePolitics: new Array(150).fill(false),
     publicAdministration: new Array(150).fill(false),
-    internationalRelations: new Array(150).fill(false)
+    internationalRelations: new Array(150).fill(false),
+    lectures: new Array(250).fill(false),
+    tests: new Array(500).fill(false)
   });
   const [activeSection, setActiveSection] = useState<keyof PSIRData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,7 +51,9 @@ export default function PSIRSubjectsPage() {
           politicalTheory: new Array(150).fill(false),
           comparativePolitics: new Array(150).fill(false),
           publicAdministration: new Array(150).fill(false),
-          internationalRelations: new Array(150).fill(false)
+          internationalRelations: new Array(150).fill(false),
+          lectures: new Array(250).fill(false),
+          tests: new Array(500).fill(false)
         };
         
         data.forEach(item => {
@@ -54,6 +62,8 @@ export default function PSIRSubjectsPage() {
           else if (item.section_name === 'Comparative Politics') sectionKey = 'comparativePolitics';
           else if (item.section_name === 'Public Administration') sectionKey = 'publicAdministration';
           else if (item.section_name === 'International Relations') sectionKey = 'internationalRelations';
+          else if (item.section_name === 'Lectures') sectionKey = 'lectures';
+          else if (item.section_name === 'Tests') sectionKey = 'tests';
           else return;
           
           for (let i = 0; i < item.completed_items; i++) {
@@ -74,14 +84,15 @@ export default function PSIRSubjectsPage() {
   const saveProgress = async () => {
     setSaving(true);
     try {
-      const sections = ['politicalTheory', 'comparativePolitics', 'publicAdministration', 'internationalRelations'] as const;
+      const sections = ['politicalTheory', 'comparativePolitics', 'publicAdministration', 'internationalRelations', 'lectures', 'tests'] as const;
       
       for (const section of sections) {
         const completedCount = progress[section].filter(Boolean).length;
         const sectionName = section === 'politicalTheory' ? 'Political Theory' :
                            section === 'comparativePolitics' ? 'Comparative Politics' :
                            section === 'publicAdministration' ? 'Public Administration' :
-                           'International Relations';
+                           section === 'internationalRelations' ? 'International Relations' :
+                           section.charAt(0).toUpperCase() + section.slice(1);
         
         await fetch('/api/psir', {
           method: 'PUT',
@@ -108,10 +119,12 @@ export default function PSIRSubjectsPage() {
   const hasChanges = JSON.stringify(progress) !== JSON.stringify(savedProgress);
 
   const sections = [
-    { key: 'politicalTheory' as keyof PSIRData, label: 'Political Theory', icon: BookOpen, color: 'text-blue-400' },
-    { key: 'comparativePolitics' as keyof PSIRData, label: 'Comparative Politics', icon: Users, color: 'text-green-400' },
-    { key: 'publicAdministration' as keyof PSIRData, label: 'Public Administration', icon: FileText, color: 'text-yellow-400' },
-    { key: 'internationalRelations' as keyof PSIRData, label: 'International Relations', icon: Globe, color: 'text-red-400' }
+    { key: 'politicalTheory' as keyof PSIRData, label: 'Political Theory', icon: BookOpen, color: 'text-blue-400', total: 150 },
+    { key: 'comparativePolitics' as keyof PSIRData, label: 'Comparative Politics', icon: Users, color: 'text-green-400', total: 150 },
+    { key: 'publicAdministration' as keyof PSIRData, label: 'Public Administration', icon: FileText, color: 'text-yellow-400', total: 150 },
+    { key: 'internationalRelations' as keyof PSIRData, label: 'International Relations', icon: Globe, color: 'text-red-400', total: 150 },
+    { key: 'lectures' as keyof PSIRData, label: 'Lectures', icon: BookOpen, color: 'text-purple-400', total: 250 },
+    { key: 'tests' as keyof PSIRData, label: 'Tests', icon: FileText, color: 'text-pink-400', total: 500 }
   ];
 
   const handleCheckboxToggle = (section: keyof PSIRData, index: number) => {
@@ -144,7 +157,7 @@ export default function PSIRSubjectsPage() {
           </Link>
           <div>
             <h1 className="text-4xl font-bold gradient-text">PSIR</h1>
-            <p className="text-gray-300 mt-2">Political Science & International Relations - 4 sections with 150 items each</p>
+            <p className="text-gray-300 mt-2">Political Science & International Relations - 4 core sections + 250 lectures + 500 tests</p>
           </div>
         </div>
       </motion.div>
@@ -169,10 +182,10 @@ export default function PSIRSubjectsPage() {
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-6 mb-8">
+      <div className="grid md:grid-cols-3 gap-6 mb-8">
         {sections.map((section) => {
           const completedCount = progress[section.key].filter(Boolean).length;
-          const percentage = calculateProgress(completedCount, 150);
+          const percentage = calculateProgress(completedCount, section.total);
           const Icon = section.icon;
           
           return (
@@ -184,7 +197,7 @@ export default function PSIRSubjectsPage() {
               
               <div className="text-center mb-4">
                 <div className={`text-4xl font-bold ${section.color} mb-2`}>{percentage}%</div>
-                <div className="text-sm text-gray-400">{completedCount}/150 completed</div>
+                <div className="text-sm text-gray-400">{completedCount}/{section.total} completed</div>
               </div>
 
               <div className="w-full bg-gray-700 rounded-full h-3 mb-4">
@@ -193,7 +206,9 @@ export default function PSIRSubjectsPage() {
                     section.key === 'politicalTheory' ? 'from-blue-400 to-blue-600' :
                     section.key === 'comparativePolitics' ? 'from-green-400 to-green-600' :
                     section.key === 'publicAdministration' ? 'from-yellow-400 to-yellow-600' :
-                    'from-red-400 to-red-600'
+                    section.key === 'internationalRelations' ? 'from-red-400 to-red-600' :
+                    section.key === 'lectures' ? 'from-purple-400 to-purple-600' :
+                    'from-pink-400 to-pink-600'
                   }`}
                   initial={{ width: 0 }}
                   animate={{ width: `${percentage}%` }}
@@ -216,7 +231,7 @@ export default function PSIRSubjectsPage() {
         <GlassCard>
           <h4 className="text-xl font-semibold mb-4 capitalize text-blue-400">{activeSection} Progress</h4>
           <div className="grid grid-cols-10 gap-1 max-h-96 overflow-y-auto">
-            {Array.from({ length: 150 }, (_, i) => (
+            {Array.from({ length: sections.find(s => s.key === activeSection)?.total || 150 }, (_, i) => (
               <button
                 key={i}
                 onClick={() => handleCheckboxToggle(activeSection, i)}

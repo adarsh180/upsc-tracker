@@ -12,7 +12,7 @@ export async function GET() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT DEFAULT 1,
         section_name VARCHAR(100),
-        total_items INT DEFAULT 150,
+        total_items INT DEFAULT 250,
         completed_items INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -49,9 +49,11 @@ export async function PUT(request: NextRequest) {
         [completed_items, section_name]
       );
     } else {
+      const totalItems = section_name === 'Lectures' ? 250 : 
+                        section_name === 'Tests' ? 500 : 150;
       await connection.execute(
-        'INSERT INTO psir_progress (user_id, section_name, completed_items, total_items) VALUES (1, ?, ?, 150)',
-        [section_name, completed_items]
+        'INSERT INTO psir_progress (user_id, section_name, completed_items, total_items) VALUES (1, ?, ?, ?)',
+        [section_name, completed_items, totalItems]
       );
     }
     

@@ -51,9 +51,10 @@ export async function PUT(request: NextRequest) {
       );
     } else {
       // Insert new record
+      const totalItems = section_name === 'Tests' ? 500 : 140;
       await connection.execute(
-        'INSERT INTO optional_progress (user_id, section_name, completed_items, total_items) VALUES (1, ?, ?, 140)',
-        [section_name, completed_items]
+        'INSERT INTO optional_progress (user_id, section_name, completed_items, total_items) VALUES (1, ?, ?, ?)',
+        [section_name, completed_items, totalItems]
       );
     }
     

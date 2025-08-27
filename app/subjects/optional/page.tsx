@@ -19,13 +19,13 @@ export default function OptionalSubjectsPage() {
     lectures: new Array(140).fill(false),
     answerWriting: new Array(140).fill(false),
     pyq: new Array(140).fill(false),
-    tests: new Array(140).fill(false)
+    tests: new Array(500).fill(false)
   });
   const [savedProgress, setSavedProgress] = useState<OptionalData>({
     lectures: new Array(140).fill(false),
     answerWriting: new Array(140).fill(false),
     pyq: new Array(140).fill(false),
-    tests: new Array(140).fill(false)
+    tests: new Array(500).fill(false)
   });
   const [activeSection, setActiveSection] = useState<keyof OptionalData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,7 +45,7 @@ export default function OptionalSubjectsPage() {
           lectures: new Array(140).fill(false),
           answerWriting: new Array(140).fill(false),
           pyq: new Array(140).fill(false),
-          tests: new Array(140).fill(false)
+          tests: new Array(500).fill(false)
         };
         
         data.forEach(item => {
@@ -107,10 +107,10 @@ export default function OptionalSubjectsPage() {
   const hasChanges = JSON.stringify(progress) !== JSON.stringify(savedProgress);
 
   const sections = [
-    { key: 'lectures' as keyof OptionalData, label: 'Lectures', icon: BookOpen, color: 'text-blue-400' },
-    { key: 'answerWriting' as keyof OptionalData, label: 'Answer Writing', icon: PenTool, color: 'text-green-400' },
-    { key: 'pyq' as keyof OptionalData, label: 'PYQ', icon: FileText, color: 'text-yellow-400' },
-    { key: 'tests' as keyof OptionalData, label: 'Tests', icon: TestTube, color: 'text-red-400' }
+    { key: 'lectures' as keyof OptionalData, label: 'Lectures', icon: BookOpen, color: 'text-blue-400', total: 140 },
+    { key: 'answerWriting' as keyof OptionalData, label: 'Answer Writing', icon: PenTool, color: 'text-green-400', total: 140 },
+    { key: 'pyq' as keyof OptionalData, label: 'PYQ', icon: FileText, color: 'text-yellow-400', total: 140 },
+    { key: 'tests' as keyof OptionalData, label: 'Tests', icon: TestTube, color: 'text-red-400', total: 500 }
   ];
 
   const handleCheckboxToggle = (section: keyof OptionalData, index: number) => {
@@ -163,7 +163,7 @@ export default function OptionalSubjectsPage() {
       <div className="grid md:grid-cols-2 gap-6 mb-8">
         {sections.map((section) => {
           const completedCount = progress[section.key].filter(Boolean).length;
-          const percentage = calculateProgress(completedCount, 140);
+          const percentage = calculateProgress(completedCount, section.total);
           const Icon = section.icon;
           
           return (
@@ -175,7 +175,7 @@ export default function OptionalSubjectsPage() {
               
               <div className="text-center mb-4">
                 <div className={`text-4xl font-bold ${section.color} mb-2`}>{percentage}%</div>
-                <div className="text-sm text-gray-400">{completedCount}/140 completed</div>
+                <div className="text-sm text-gray-400">{completedCount}/{section.total} completed</div>
               </div>
 
               <div className="w-full bg-gray-700 rounded-full h-3 mb-4">
@@ -202,7 +202,7 @@ export default function OptionalSubjectsPage() {
         <GlassCard>
           <h4 className="text-xl font-semibold mb-4 capitalize text-blue-400">{activeSection} Progress</h4>
           <div className="grid grid-cols-10 gap-1 max-h-96 overflow-y-auto">
-            {Array.from({ length: 140 }, (_, i) => (
+            {Array.from({ length: sections.find(s => s.key === activeSection)?.total || 140 }, (_, i) => (
               <button
                 key={i}
                 onClick={() => handleCheckboxToggle(activeSection, i)}
