@@ -12,9 +12,31 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Update multiple fields at once
-    const fields = Object.keys(updates);
-    const values = Object.values(updates);
+    // Filter out fields that don't exist in the database yet
+    const allowedFields = ['total_lectures', 'total_dpps', 'completed_lectures', 'completed_dpps', 'revisions'];
+    const filteredUpdates: any = {};
+    
+    // Add basic fields
+    Object.keys(updates).forEach(key => {
+      if (allowedFields.includes(key)) {
+        filteredUpdates[key] = updates[key];
+      }
+    });
+    
+    // Try to add new fields if they exist
+    try {
+      if (updates.completed_lectures_list !== undefined) {
+        filteredUpdates.completed_lectures_list = updates.completed_lectures_list;
+      }
+      if (updates.completed_dpps_list !== undefined) {
+        filteredUpdates.completed_dpps_list = updates.completed_dpps_list;
+      }
+    } catch (e) {
+      // Ignore if columns don't exist
+    }
+
+    const fields = Object.keys(filteredUpdates);
+    const values = Object.values(filteredUpdates);
     const updateString = fields.map(field => `${field} = ?`).join(', ');
 
     await connection.execute(

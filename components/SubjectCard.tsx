@@ -38,11 +38,28 @@ export default function SubjectCard({ subject, onUpdate }: SubjectCardProps) {
 
   // Update completed items when subject data changes
   useEffect(() => {
-    setCompletedItems({
-      lectures: new Set(Array.from({ length: subject.completed_lectures }, (_, i) => i)),
-      dpps: new Set(Array.from({ length: subject.completed_dpps }, (_, i) => i))
-    });
-  }, [subject.completed_lectures, subject.completed_dpps]);
+    try {
+      // Try to parse stored completion lists, fallback to sequential if not available
+      const lecturesArray = subject.completed_lectures_list ? 
+        JSON.parse(subject.completed_lectures_list) : 
+        Array.from({ length: subject.completed_lectures }, (_, i) => i);
+      
+      const dppsArray = subject.completed_dpps_list ? 
+        JSON.parse(subject.completed_dpps_list) : 
+        Array.from({ length: subject.completed_dpps }, (_, i) => i);
+      
+      setCompletedItems({
+        lectures: new Set(lecturesArray),
+        dpps: new Set(dppsArray)
+      });
+    } catch (error) {
+      // Fallback to sequential completion if parsing fails
+      setCompletedItems({
+        lectures: new Set(Array.from({ length: subject.completed_lectures }, (_, i) => i)),
+        dpps: new Set(Array.from({ length: subject.completed_dpps }, (_, i) => i))
+      });
+    }
+  }, [subject.completed_lectures, subject.completed_dpps, subject.completed_lectures_list, subject.completed_dpps_list]);
 
   const handleCheckboxToggle = (type: 'lecture' | 'dpp', index: number) => {
     setCompletedItems(prev => {
@@ -74,18 +91,32 @@ export default function SubjectCard({ subject, onUpdate }: SubjectCardProps) {
 
   const handleSave = async () => {
     try {
+      // Convert Sets to arrays for storage
+      const completedLecturesArray = Array.from(completedItems.lectures).sort((a, b) => a - b);
+      const completedDppsArray = Array.from(completedItems.dpps).sort((a, b) => a - b);
+      
+      const updates: any = {
+        total_lectures: pendingCounts.total_lectures,
+        total_dpps: pendingCounts.total_dpps,
+        completed_lectures: completedItems.lectures.size,
+        completed_dpps: completedItems.dpps.size
+      };
+      
+      // Try to include completion lists if supported
+      try {
+        updates.completed_lectures_list = JSON.stringify(completedLecturesArray);
+        updates.completed_dpps_list = JSON.stringify(completedDppsArray);
+      } catch (e) {
+        // Fallback without completion lists
+      }
+      
       // Batch update all changes
       const response = await fetch('/api/subjects/update/batch', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: subject.id,
-          updates: {
-            total_lectures: pendingCounts.total_lectures,
-            total_dpps: pendingCounts.total_dpps,
-            completed_lectures: pendingProgress.completed_lectures,
-            completed_dpps: pendingProgress.completed_dpps
-          }
+          updates
         })
       });
 
@@ -110,12 +141,6 @@ export default function SubjectCard({ subject, onUpdate }: SubjectCardProps) {
       setPendingProgress({
         completed_lectures: result.data.completed_lectures,
         completed_dpps: result.data.completed_dpps
-      });
-      
-      // Update completed items to reflect saved state
-      setCompletedItems({
-        lectures: new Set(Array.from({ length: result.data.completed_lectures }, (_, i) => i)),
-        dpps: new Set(Array.from({ length: result.data.completed_dpps }, (_, i) => i))
       });
       
       setHasChanges(false);

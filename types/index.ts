@@ -8,6 +8,8 @@ export interface SubjectProgress {
   completed_dpps: number;
   revisions: number;
   updated_at: string;
+  completed_lectures_list?: string;
+  completed_dpps_list?: string;
 }
 
 export interface TestRecord {
