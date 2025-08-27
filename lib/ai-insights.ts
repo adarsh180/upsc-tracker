@@ -70,7 +70,7 @@ export class AIInsightsEngine {
     const avgEfficiency = data.reduce((sum, d) => sum + (d.avg_efficiency || 0), 0) / data.length;
     if (avgEfficiency < 2) improvementAreas.push('Learning efficiency');
     
-    const weekendStudy = dayPerformance.get('Saturday')?.count || 0 + dayPerformance.get('Sunday')?.count || 0;
+    const weekendStudy = (dayPerformance.get('Saturday')?.count || 0) + (dayPerformance.get('Sunday')?.count || 0);
     if (weekendStudy < studyDays * 0.2) improvementAreas.push('Weekend utilization');
 
     return {
