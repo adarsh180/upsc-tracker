@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, Circle, BookOpen, FileText, RotateCcw, TrendingUp } from 'lucide-react';
 import GlassCard from './GlassCard';
@@ -31,14 +31,39 @@ export default function SubjectCard({ subject, onUpdate }: SubjectCardProps) {
   const lectureProgress = calculateProgress(pendingProgress.completed_lectures, pendingCounts.total_lectures);
   const dppProgress = calculateProgress(pendingProgress.completed_dpps, pendingCounts.total_dpps);
 
+  const [completedItems, setCompletedItems] = useState(() => ({
+    lectures: new Set(Array.from({ length: subject.completed_lectures }, (_, i) => i)),
+    dpps: new Set(Array.from({ length: subject.completed_dpps }, (_, i) => i))
+  }));
+
+  // Update completed items when subject data changes
+  useEffect(() => {
+    setCompletedItems({
+      lectures: new Set(Array.from({ length: subject.completed_lectures }, (_, i) => i)),
+      dpps: new Set(Array.from({ length: subject.completed_dpps }, (_, i) => i))
+    });
+  }, [subject.completed_lectures, subject.completed_dpps]);
+
   const handleCheckboxToggle = (type: 'lecture' | 'dpp', index: number) => {
-    if (type === 'lecture') {
-      const newCompleted = index + 1;
-      setPendingProgress(prev => ({ ...prev, completed_lectures: newCompleted }));
-    } else {
-      const newCompleted = index + 1;
-      setPendingProgress(prev => ({ ...prev, completed_dpps: newCompleted }));
-    }
+    setCompletedItems(prev => {
+      const newCompleted = { ...prev };
+      if (type === 'lecture') {
+        if (newCompleted.lectures.has(index)) {
+          newCompleted.lectures.delete(index);
+        } else {
+          newCompleted.lectures.add(index);
+        }
+        setPendingProgress(prevProgress => ({ ...prevProgress, completed_lectures: newCompleted.lectures.size }));
+      } else {
+        if (newCompleted.dpps.has(index)) {
+          newCompleted.dpps.delete(index);
+        } else {
+          newCompleted.dpps.add(index);
+        }
+        setPendingProgress(prevProgress => ({ ...prevProgress, completed_dpps: newCompleted.dpps.size }));
+      }
+      return newCompleted;
+    });
     setHasChanges(true);
   };
 
@@ -87,6 +112,12 @@ export default function SubjectCard({ subject, onUpdate }: SubjectCardProps) {
         completed_dpps: result.data.completed_dpps
       });
       
+      // Update completed items to reflect saved state
+      setCompletedItems({
+        lectures: new Set(Array.from({ length: result.data.completed_lectures }, (_, i) => i)),
+        dpps: new Set(Array.from({ length: result.data.completed_dpps }, (_, i) => i))
+      });
+      
       setHasChanges(false);
       setConfiguring(false);
     } catch (error) {
@@ -98,6 +129,10 @@ export default function SubjectCard({ subject, onUpdate }: SubjectCardProps) {
   const handleReset = () => {
     setPendingCounts({ total_lectures: subject.total_lectures, total_dpps: subject.total_dpps });
     setPendingProgress({ completed_lectures: subject.completed_lectures, completed_dpps: subject.completed_dpps });
+    setCompletedItems({
+      lectures: new Set(Array.from({ length: subject.completed_lectures }, (_, i) => i)),
+      dpps: new Set(Array.from({ length: subject.completed_dpps }, (_, i) => i))
+    });
     setHasChanges(false);
   };
 
@@ -283,11 +318,13 @@ export default function SubjectCard({ subject, onUpdate }: SubjectCardProps) {
                 <button
                   key={`lecture-${i}`}
                   onClick={() => handleCheckboxToggle('lecture', i)}
-                  className="flex items-center justify-center p-1 hover:bg-white/10 rounded text-xs min-w-[24px] h-6"
+                  className={`flex items-center justify-center p-1 hover:bg-white/10 rounded text-xs min-w-[24px] h-6 transition-colors ${
+                    completedItems.lectures.has(i) ? 'bg-green-500/20' : 'bg-gray-700/20'
+                  }`}
                   title={`Lecture ${i + 1}`}
                 >
-                  {i < pendingProgress.completed_lectures ? (
-                    <span className="text-green-400 font-bold">{i + 1}</span>
+                  {completedItems.lectures.has(i) ? (
+                    <span className="text-green-400 font-bold">✓</span>
                   ) : (
                     <span className="text-gray-400">{i + 1}</span>
                   )}
@@ -303,11 +340,13 @@ export default function SubjectCard({ subject, onUpdate }: SubjectCardProps) {
                 <button
                   key={`dpp-${i}`}
                   onClick={() => handleCheckboxToggle('dpp', i)}
-                  className="flex items-center justify-center p-1 hover:bg-white/10 rounded text-xs min-w-[24px] h-6"
+                  className={`flex items-center justify-center p-1 hover:bg-white/10 rounded text-xs min-w-[24px] h-6 transition-colors ${
+                    completedItems.dpps.has(i) ? 'bg-green-500/20' : 'bg-gray-700/20'
+                  }`}
                   title={`DPP ${i + 1}`}
                 >
-                  {i < pendingProgress.completed_dpps ? (
-                    <span className="text-green-400 font-bold">{i + 1}</span>
+                  {completedItems.dpps.has(i) ? (
+                    <span className="text-green-400 font-bold">✓</span>
                   ) : (
                     <span className="text-gray-400">{i + 1}</span>
                   )}
