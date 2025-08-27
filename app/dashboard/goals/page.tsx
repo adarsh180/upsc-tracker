@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Calendar, Clock, BookOpen, ArrowLeft, TrendingUp, Target, Award } from 'lucide-react';
+import { Plus, Calendar, Clock, BookOpen, ArrowLeft, TrendingUp, Target, Award, BarChart3, Activity, Zap, Brain } from 'lucide-react';
 import Link from 'next/link';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import GlassCard from '@/components/GlassCard';
+
 import { DailyGoal } from '@/types';
+
 
 // Helper function to get current IST date
 function getCurrentISTDate() {
@@ -126,11 +128,24 @@ export default function GoalsPage() {
     try {
       const response = await fetch('/api/goals/analytics');
       const data = await response.json();
+      // Generate complete date range for last 30 days
+      const today = new Date();
+      const last30Days = [];
+      for (let i = 29; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        const existingData = data.daily.find((d: any) => d.date.split('T')[0] === dateStr);
+        last30Days.push({
+          date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          hours: existingData?.hours || 0,
+          topics: existingData?.topics || 0,
+          questions: existingData?.questions || 0
+        });
+      }
+
       setAnalyticsData({
-        daily: data.daily.map((d: any) => ({
-          ...d,
-          date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-        })),
+        daily: last30Days,
         weekly: data.weekly.map((w: any) => ({
           ...w,
           label: `W${w.week}`
@@ -156,6 +171,10 @@ export default function GoalsPage() {
   useEffect(() => {
     fetchAnalyticsData();
   }, [goals.length]);
+
+
+
+
 
   if (loading) {
     return (
@@ -228,6 +247,7 @@ export default function GoalsPage() {
               >
                 <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
                 <span>{analyticsData.lifetime.study_days} study days • {analyticsData.lifetime.total_hours} total hours</span>
+
               </motion.div>
             </div>
           </div>
@@ -342,30 +362,47 @@ export default function GoalsPage() {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6">
+        <div className="space-y-8">
           <div>
-            <h4 className="text-lg font-medium mb-4 text-green-400">Study Hours Trend</h4>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={analyticsData[activeTab as keyof typeof analyticsData] || []}>
+            <h4 className="text-2xl font-bold mb-6 text-green-400 flex items-center gap-3">
+              <Clock className="w-7 h-7" />
+              Study Hours Trend
+            </h4>
+            <ResponsiveContainer width="100%" height={500}>
+              <AreaChart data={analyticsData[activeTab as keyof typeof analyticsData] || []} margin={{ top: 30, right: 40, left: 20, bottom: 30 }}>
                 <defs>
                   <linearGradient id="colorHours" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0.1} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.6} />
                 <XAxis
                   dataKey={activeTab === 'daily' ? 'date' : activeTab === 'weekly' ? 'label' : 'label'}
                   stroke="#9CA3AF"
-                  fontSize={12}
+                  fontSize={13}
+                  tick={{ fill: '#9CA3AF' }}
+                  axisLine={{ stroke: '#4B5563' }}
                 />
-                <YAxis stroke="#9CA3AF" fontSize={12} />
+                <YAxis 
+                  stroke="#9CA3AF" 
+                  fontSize={13} 
+                  domain={[0, (dataMax: number) => {
+                    const max = Math.max(dataMax * 1.2, 1);
+                    return Math.ceil(max);
+                  }]}
+                  tick={{ fill: '#9CA3AF' }}
+                  axisLine={{ stroke: '#4B5563' }}
+                  allowDataOverflow={false}
+                />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: 'rgba(0,0,0,0.8)',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    borderRadius: '8px'
+                    backgroundColor: 'rgba(0,0,0,0.9)',
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
                   }}
+                  labelStyle={{ color: '#10B981' }}
                 />
                 <Area
                   type="monotone"
@@ -373,49 +410,113 @@ export default function GoalsPage() {
                   stroke="#10B981"
                   fillOpacity={1}
                   fill="url(#colorHours)"
-                  strokeWidth={2}
+                  strokeWidth={3}
+                  dot={{ fill: '#10B981', strokeWidth: 2, r: 5 }}
+                  activeDot={{ r: 8, stroke: '#10B981', strokeWidth: 3, fill: '#065F46' }}
+                  animationDuration={2000}
+                  animationEasing="ease-in-out"
                 />
               </AreaChart>
             </ResponsiveContainer>
           </div>
 
           <div>
-            <h4 className="text-lg font-medium mb-4 text-purple-400">Topics & Questions Trend</h4>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={analyticsData[activeTab as keyof typeof analyticsData] || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+            <h4 className="text-2xl font-bold mb-6 text-purple-400 flex items-center gap-3">
+              <BookOpen className="w-7 h-7" />
+              Topics Covered Trend
+            </h4>
+            <ResponsiveContainer width="100%" height={500}>
+              <LineChart data={analyticsData[activeTab as keyof typeof analyticsData] || []} margin={{ top: 30, right: 40, left: 20, bottom: 30 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.6} />
                 <XAxis
                   dataKey={activeTab === 'daily' ? 'date' : activeTab === 'weekly' ? 'label' : 'label'}
                   stroke="#9CA3AF"
-                  fontSize={12}
+                  fontSize={13}
+                  tick={{ fill: '#9CA3AF' }}
+                  axisLine={{ stroke: '#4B5563' }}
                 />
-                <YAxis stroke="#9CA3AF" fontSize={12} />
+                <YAxis 
+                  stroke="#9CA3AF" 
+                  fontSize={13} 
+                  domain={[0, 70]}
+                  ticks={[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70]}
+                  tick={{ fill: '#9CA3AF' }}
+                  axisLine={{ stroke: '#4B5563' }}
+                  allowDataOverflow={false}
+                />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: 'rgba(0,0,0,0.8)',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    borderRadius: '8px'
+                    backgroundColor: 'rgba(0,0,0,0.9)',
+                    border: '1px solid rgba(139, 92, 246, 0.3)',
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
                   }}
+                  labelStyle={{ color: '#8B5CF6' }}
                 />
                 <Line
                   type="monotone"
                   dataKey="topics"
                   stroke="#8B5CF6"
-                  strokeWidth={2}
-                  dot={false}
+                  strokeWidth={4}
+                  dot={{ fill: '#8B5CF6', strokeWidth: 2, r: 6 }}
+                  activeDot={{ r: 10, stroke: '#8B5CF6', strokeWidth: 3, fill: '#581C87' }}
+                  animationDuration={2000}
+                  animationEasing="ease-in-out"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div>
+            <h4 className="text-2xl font-bold mb-6 text-yellow-400 flex items-center gap-3">
+              <Target className="w-7 h-7" />
+              Questions Solved Trend
+            </h4>
+            <ResponsiveContainer width="100%" height={500}>
+              <LineChart data={analyticsData[activeTab as keyof typeof analyticsData] || []} margin={{ top: 30, right: 40, left: 20, bottom: 30 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.6} />
+                <XAxis
+                  dataKey={activeTab === 'daily' ? 'date' : activeTab === 'weekly' ? 'label' : 'label'}
+                  stroke="#9CA3AF"
+                  fontSize={13}
+                  tick={{ fill: '#9CA3AF' }}
+                  axisLine={{ stroke: '#4B5563' }}
+                />
+                <YAxis 
+                  stroke="#9CA3AF" 
+                  fontSize={13} 
+                  domain={[0, 250]}
+                  ticks={[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140, 145, 150, 155, 160, 165, 170, 175, 180, 185, 190, 195, 200, 205, 210, 215, 220, 225, 230, 235, 240, 245, 250]}
+                  tick={{ fill: '#9CA3AF' }}
+                  axisLine={{ stroke: '#4B5563' }}
+                  allowDataOverflow={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'rgba(0,0,0,0.9)',
+                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
+                  }}
+                  labelStyle={{ color: '#F59E0B' }}
                 />
                 <Line
                   type="monotone"
                   dataKey="questions"
                   stroke="#F59E0B"
-                  strokeWidth={2}
-                  dot={false}
+                  strokeWidth={4}
+                  dot={{ fill: '#F59E0B', strokeWidth: 2, r: 6 }}
+                  activeDot={{ r: 10, stroke: '#F59E0B', strokeWidth: 3, fill: '#92400E' }}
+                  animationDuration={2000}
+                  animationEasing="ease-in-out"
                 />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
       </GlassCard>
+
+
 
       {/* Enhanced Study Sessions */}
       <motion.div
