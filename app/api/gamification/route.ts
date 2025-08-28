@@ -1,92 +1,136 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getConnection } from '@/lib/db';
+import { getConnection, releaseConnection } from '@/lib/db';
 
-const LEVELS = [
-  { name: 'Iron', prelims: 0, mains: 0, color: 'text-gray-400' },
-  { name: 'Bronze', prelims: 3000, mains: 500, color: 'text-orange-600' },
-  { name: 'Silver', prelims: 6000, mains: 1000, color: 'text-gray-300' },
-  { name: 'Gold', prelims: 12000, mains: 2000, color: 'text-yellow-400' },
-  { name: 'Platinum', prelims: 18000, mains: 3000, color: 'text-blue-400' },
-  { name: 'Diamond', prelims: 24000, mains: 4000, color: 'text-purple-400' },
-  { name: 'Master', prelims: 30000, mains: 5000, color: 'text-red-400' }
-];
-
-function calculateLevel(prelims: number, mains: number) {
-  for (let i = LEVELS.length - 1; i >= 0; i--) {
-    if (prelims >= LEVELS[i].prelims && mains >= LEVELS[i].mains) {
-      return LEVELS[i];
-    }
-  }
-  return LEVELS[0];
-}
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
     const connection = await getConnection();
     
     await connection.execute(`
-      CREATE TABLE IF NOT EXISTS user_progress (
+      CREATE TABLE IF NOT EXISTS gamification (
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT DEFAULT 1,
-        prelims_questions INT DEFAULT 0,
-        mains_questions INT DEFAULT 0,
-        current_level VARCHAR(50) DEFAULT 'Iron',
-        total_points INT DEFAULT 0,
-        streak_days INT DEFAULT 0,
-        last_activity DATE,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        current_streak INT DEFAULT 0,
+        highest_streak INT DEFAULT 0,
+        last_activity_date DATE,
+        total_achievements INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_user (user_id)
       )
     `);
     
-    // Insert default record if none exists
-    await connection.execute(`
-      INSERT IGNORE INTO user_progress (user_id, prelims_questions, mains_questions, current_level) 
-      VALUES (1, 0, 0, 'Iron')
-    `);
-    
     const [rows] = await connection.execute(
-      'SELECT * FROM user_progress WHERE user_id = 1'
+      'SELECT * FROM gamification WHERE user_id = 1'
     );
-    await connection.end();
     
-    const progress = (Array.isArray(rows) ? rows[0] : null) || { prelims_questions: 0, mains_questions: 0 };
-    const progressData = progress as any;
-    const level = calculateLevel(progressData.prelims_questions || 0, progressData.mains_questions || 0);
+    let gamificationData;
+    if (Array.isArray(rows) && rows.length > 0) {
+      gamificationData = rows[0];
+    } else {
+      await connection.execute(
+        'INSERT INTO gamification (user_id) VALUES (1)'
+      );
+      gamificationData = { current_streak: 0, highest_streak: 0, total_achievements: 0 };
+    }
     
-    return NextResponse.json({ 
-      ...progressData, 
-      prelims_questions: progressData.prelims_questions || 0,
-      mains_questions: progressData.mains_questions || 0,
-      level, 
-      levels: LEVELS 
-    });
+    releaseConnection(connection);
+    return NextResponse.json(gamificationData);
   } catch (error) {
     console.error('Database error:', error);
-    return NextResponse.json({ 
-      prelims_questions: 0, 
-      mains_questions: 0, 
-      level: LEVELS[0], 
-      levels: LEVELS 
-    }, { status: 200 });
+    return NextResponse.json({ error: 'Failed to fetch gamification data' }, { status: 500 });
   }
 }
 
-export async function PUT(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const { prelims_questions, mains_questions } = await request.json();
-    
+    const { hours_studied, questions_solved } = await request.json();
     const connection = await getConnection();
-    const level = calculateLevel(prelims_questions || 0, mains_questions || 0);
     
-    await connection.execute(
-      'INSERT INTO user_progress (user_id, prelims_questions, mains_questions, current_level, last_activity) VALUES (1, ?, ?, ?, CURDATE()) ON DUPLICATE KEY UPDATE prelims_questions = ?, mains_questions = ?, current_level = ?, last_activity = CURDATE()',
-      [prelims_questions || 0, mains_questions || 0, level.name, prelims_questions || 0, mains_questions || 0, level.name]
+    // Get current IST date
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istTime = new Date(now.getTime() + istOffset);
+    const today = istTime.toISOString().split('T')[0];
+    
+    // Get current gamification data
+    const [existing] = await connection.execute(
+      'SELECT * FROM gamification WHERE user_id = 1'
     );
-    await connection.end();
     
-    return NextResponse.json({ success: true, level });
+    let currentStreak = 0;
+    let highestStreak = 0;
+    let achievements = 0;
+    
+    if (Array.isArray(existing) && existing.length > 0) {
+      const data = existing[0] as any;
+      const lastActivityDate = data.last_activity_date;
+      
+      if (lastActivityDate) {
+        const lastDate = new Date(lastActivityDate);
+        const todayDate = new Date(today);
+        const diffTime = todayDate.getTime() - lastDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 0) {
+          // Same day, no streak change
+          currentStreak = data.current_streak;
+        } else if (diffDays === 1) {
+          // Next day, increment streak
+          currentStreak = data.current_streak + 1;
+        } else {
+          // Gap > 1 day, reset streak
+          currentStreak = 1;
+        }
+      } else {
+        currentStreak = 1;
+      }
+      
+      highestStreak = Math.max(currentStreak, data.highest_streak);
+      achievements = data.total_achievements;
+    } else {
+      currentStreak = 1;
+      highestStreak = 1;
+    }
+    
+    // Check for achievements
+    if (hours_studied >= 8) achievements++;
+    if (questions_solved >= 100) achievements++;
+    
+    // Update gamification data
+    await connection.execute(`
+      INSERT INTO gamification (user_id, current_streak, highest_streak, last_activity_date, total_achievements)
+      VALUES (1, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+      current_streak = VALUES(current_streak),
+      highest_streak = VALUES(highest_streak),
+      last_activity_date = VALUES(last_activity_date),
+      total_achievements = VALUES(total_achievements)
+    `, [currentStreak, highestStreak, today, achievements]);
+    
+    releaseConnection(connection);
+    
+    const achievementMessages: string[] = [];
+    
+    // Add achievement messages
+    if (hours_studied >= 8) {
+      achievementMessages.push('🔥 Study Champion! 8+ hours today!');
+    }
+    if (questions_solved >= 100) {
+      achievementMessages.push('🎯 Question Master! 100+ questions solved!');
+    }
+    
+    const response = {
+      current_streak: currentStreak,
+      highest_streak: highestStreak,
+      achievements: achievementMessages,
+      total_achievements: achievements
+    };
+    
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Database error:', error);
-    return NextResponse.json({ error: 'Failed to update gamification data' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to update gamification' }, { status: 500 });
   }
 }

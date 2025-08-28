@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Calendar, Clock, BookOpen, ArrowLeft, TrendingUp, Target, Award, BarChart3, Activity, Zap, Brain } from 'lucide-react';
+import { Plus, Calendar, Clock, BookOpen, ArrowLeft, TrendingUp, Target, Award, BarChart3, Activity, Zap, Brain, Users, FileText, Globe } from 'lucide-react';
 import Link from 'next/link';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import GlassCard from '@/components/GlassCard';
@@ -31,6 +31,8 @@ export default function GoalsPage() {
     notes: ''
   });
   const [editingGoal, setEditingGoal] = useState<DailyGoal | null>(null);
+  const [achievements, setAchievements] = useState<string[]>([]);
+  const [showAchievements, setShowAchievements] = useState(false);
 
   useEffect(() => {
     fetchGoals();
@@ -64,7 +66,7 @@ export default function GoalsPage() {
           })
         });
       } else {
-        await fetch('/api/goals', {
+        const response = await fetch('/api/goals', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -74,6 +76,15 @@ export default function GoalsPage() {
             topics_covered: parseInt(formData.topics_covered)
           })
         });
+        
+        // Check for achievements
+        const gamificationResponse = await fetch('/api/gamification');
+        const gamificationData = await gamificationResponse.json();
+        if (gamificationData.achievements && gamificationData.achievements.length > 0) {
+          setAchievements(gamificationData.achievements);
+          setShowAchievements(true);
+          setTimeout(() => setShowAchievements(false), 5000);
+        }
       }
 
       setShowAddForm(false);
@@ -122,12 +133,18 @@ export default function GoalsPage() {
     monthly: [],
     lifetime: { total_hours: 0, total_topics: 0, total_questions: 0, total_sessions: 0, study_days: 0 }
   });
+  const [psirProgress, setPsirProgress] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState('daily');
 
   const fetchAnalyticsData = async () => {
     try {
       const response = await fetch('/api/goals/analytics');
       const data = await response.json();
+      
+      // Fetch PSIR progress
+      const psirResponse = await fetch('/api/psir');
+      const psirData = await psirResponse.json();
+      setPsirProgress(Array.isArray(psirData) ? psirData : []);
       // Generate complete date range for last 30 days
       const today = new Date();
       const last30Days = [];
@@ -513,6 +530,57 @@ export default function GoalsPage() {
               </LineChart>
             </ResponsiveContainer>
           </div>
+
+          {/* PSIR Progress Section */}
+          <div>
+            <h4 className="text-2xl font-bold mb-6 text-indigo-400 flex items-center gap-3">
+              <Brain className="w-7 h-7" />
+              PSIR Progress Overview
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {[
+                { key: 'Political Theory', icon: BookOpen, color: 'text-blue-400', total: 150 },
+                { key: 'Comparative Politics', icon: Users, color: 'text-green-400', total: 150 },
+                { key: 'Public Administration', icon: FileText, color: 'text-yellow-400', total: 150 },
+                { key: 'International Relations', icon: Globe, color: 'text-red-400', total: 150 },
+                { key: 'Lectures', icon: BookOpen, color: 'text-purple-400', total: 250 },
+                { key: 'Tests', icon: FileText, color: 'text-pink-400', total: 500 }
+              ].map((section) => {
+                const sectionData = psirProgress.find(p => p.section_name === section.key);
+                const completed = sectionData?.completed_items || 0;
+                const percentage = Math.round((completed / section.total) * 100);
+                const Icon = section.icon;
+                
+                return (
+                  <div key={section.key} className="bg-white/5 rounded-xl p-4 border border-white/10">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Icon className={`w-5 h-5 ${section.color}`} />
+                      <h5 className={`font-semibold ${section.color} text-sm`}>{section.key}</h5>
+                    </div>
+                    <div className="text-center mb-3">
+                      <div className={`text-2xl font-bold ${section.color}`}>{percentage}%</div>
+                      <div className="text-xs text-gray-400">{completed}/{section.total}</div>
+                    </div>
+                    <div className="w-full bg-gray-700 rounded-full h-2">
+                      <motion.div
+                        className={`h-2 rounded-full bg-gradient-to-r ${
+                          section.key === 'Political Theory' ? 'from-blue-400 to-blue-600' :
+                          section.key === 'Comparative Politics' ? 'from-green-400 to-green-600' :
+                          section.key === 'Public Administration' ? 'from-yellow-400 to-yellow-600' :
+                          section.key === 'International Relations' ? 'from-red-400 to-red-600' :
+                          section.key === 'Lectures' ? 'from-purple-400 to-purple-600' :
+                          'from-pink-400 to-pink-600'
+                        }`}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${percentage}%` }}
+                        transition={{ duration: 1, ease: "easeOut" }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </GlassCard>
 
@@ -765,6 +833,28 @@ export default function GoalsPage() {
               </form>
             </GlassCard>
           </motion.div>
+        </motion.div>
+      )}
+
+      {/* Achievement Notifications */}
+      {showAchievements && achievements.length > 0 && (
+        <motion.div
+          className="fixed top-4 right-4 z-50 space-y-2"
+          initial={{ opacity: 0, x: 100 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 100 }}
+        >
+          {achievements.map((achievement, index) => (
+            <motion.div
+              key={index}
+              className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-400/30 rounded-xl p-4 backdrop-blur-sm"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.2 }}
+            >
+              <div className="text-yellow-400 font-medium">{achievement}</div>
+            </motion.div>
+          ))}
         </motion.div>
       )}
     </div>

@@ -59,6 +59,20 @@ export async function POST(request: NextRequest) {
     );
     releaseConnection(connection);
     
+    // Trigger gamification update
+    try {
+      await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/gamification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hours_studied: hours_studied || 0,
+          questions_solved: questions_solved || 0
+        })
+      });
+    } catch (gamificationError) {
+      console.error('Gamification update failed:', gamificationError);
+    }
+    
     return NextResponse.json({ success: true, id: (result as any).insertId });
   } catch (error) {
     console.error('Database error:', error);

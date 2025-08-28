@@ -27,6 +27,7 @@ export default function ProgressPage() {
     monthlyTrend: [],
     subjectProgress: []
   });
+  const [gamificationData, setGamificationData] = useState<any>({ current_streak: 0, highest_streak: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,6 +40,23 @@ export default function ProgressPage() {
     try {
       const response = await fetch('/api/analytics');
       const data = await response.json();
+      
+      // Fetch PSIR progress
+      const psirResponse = await fetch('/api/psir');
+      const psirData = await psirResponse.json();
+      
+      // Fetch gamification data
+      const gamificationResponse = await fetch('/api/gamification');
+      const gamificationDataResult = await gamificationResponse.json();
+      setGamificationData(gamificationDataResult);
+      
+      // Calculate PSIR overall progress
+      let psirProgress = 0;
+      if (Array.isArray(psirData) && psirData.length > 0) {
+        const totalItems = 150 + 150 + 150 + 150 + 250 + 500; // All sections total
+        const completedItems = psirData.reduce((sum, section) => sum + (section.completed_items || 0), 0);
+        psirProgress = Math.round((completedItems / totalItems) * 100);
+      }
       
       setProgressData({
         totalStudyHours: Math.round(data?.analytics?.totalStudyHours || 0),
@@ -69,11 +87,18 @@ export default function ProgressPage() {
           { month: 'Feb', hours: 0, topics: 0, questions: 0 },
           { month: 'Mar', hours: 0, topics: 0, questions: 0 }
         ],
-        subjectProgress: (data?.subjects || []).map((s: any) => ({
-          subject: s.subject,
-          category: s.category,
-          progress: Math.round(((s.completed_lectures + s.completed_dpps) / (s.total_lectures + s.total_dpps)) * 100) || 0
-        }))
+        subjectProgress: [
+          ...(data?.subjects || []).map((s: any) => ({
+            subject: s.subject,
+            category: s.category,
+            progress: Math.round(((s.completed_lectures + s.completed_dpps) / (s.total_lectures + s.total_dpps)) * 100) || 0
+          })),
+          {
+            subject: 'PSIR',
+            category: 'OPTIONAL',
+            progress: psirProgress
+          }
+        ]
       });
     } catch (error) {
       console.error('Failed to fetch progress data:', error);
@@ -122,7 +147,7 @@ export default function ProgressPage() {
           { label: 'Study Hours', value: progressData.totalStudyHours, max: 300, color: '#3B82F6', icon: BookOpen },
           { label: 'Topics Done', value: progressData.completedTopics, max: 200, color: '#10B981', icon: Target },
           { label: 'Tests Taken', value: progressData.testsTaken, max: 50, color: '#F59E0B', icon: Award },
-          { label: 'Day Streak', value: progressData.currentStreak, max: 30, color: '#EF4444', icon: Calendar }
+          { label: 'Day Streak', value: gamificationData?.current_streak || 0, max: gamificationData?.highest_streak || 30, color: '#EF4444', icon: Calendar, subtitle: `Best: ${gamificationData?.highest_streak || 0}` }
         ].map((stat, index) => {
           const percentage = Math.min((stat.value / stat.max) * 100, 100);
           const Icon = stat.icon;
@@ -153,7 +178,9 @@ export default function ProgressPage() {
                 </div>
               </div>
               <div className="text-sm text-gray-400">{stat.label}</div>
-              <div className="text-xs text-gray-500 mt-1">{Math.round(percentage)}% of target</div>
+              <div className="text-xs text-gray-500 mt-1">
+                {stat.subtitle || `${Math.round(percentage)}% of target`}
+              </div>
             </GlassCard>
           );
         })}
