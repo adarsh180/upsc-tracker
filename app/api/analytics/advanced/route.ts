@@ -1,337 +1,525 @@
 import { NextResponse } from 'next/server';
 import { getConnection } from '@/lib/db';
-import { groq } from '@/lib/groq';
-
-export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  let connection;
   try {
-    const connection = await getConnection();
-    
-    // Fetch ALL existing data from database
-    const [subjects] = await connection.execute(`SELECT * FROM subject_progress WHERE user_id = 1`);
-    const [goals] = await connection.execute(`SELECT * FROM daily_goals WHERE user_id = 1 ORDER BY date DESC`);
-    const [tests] = await connection.execute(`SELECT * FROM test_records WHERE user_id = 1 ORDER BY attempt_date DESC`);
-    const [currentAffairs] = await connection.execute(`SELECT * FROM current_affairs WHERE user_id = 1`);
-    const [essayProgress] = await connection.execute(`SELECT * FROM essay_progress WHERE user_id = 1`);
-    const [optionalProgress] = await connection.execute(`SELECT * FROM optional_progress WHERE user_id = 1`);
-    const [moodEntries] = await connection.execute(`SELECT * FROM mood_entries WHERE user_id = 1 ORDER BY date DESC`);
-    
-    // Get comprehensive statistics
-    const [totalStats] = await connection.execute(`
-      SELECT 
-        COUNT(DISTINCT date) as total_study_days,
-        SUM(hours_studied) as total_hours,
-        SUM(topics_covered) as total_topics,
-        AVG(hours_studied) as avg_daily_hours
-      FROM daily_goals WHERE user_id = 1 AND hours_studied > 0
-    `);
-    
-    const [subjectStats] = await connection.execute(`
-      SELECT 
-        COUNT(*) as total_subjects,
-        SUM(completed_lectures) as total_completed_lectures,
-        SUM(total_lectures) as total_lectures_available,
-        SUM(completed_dpps) as total_completed_dpps,
-        SUM(total_dpps) as total_dpps_available,
-        SUM(revisions) as total_revisions
-      FROM subject_progress WHERE user_id = 1
-    `);
-    
-    const [testStats] = await connection.execute(`
-      SELECT 
-        COUNT(*) as total_tests,
-        AVG(scored_marks/total_marks*100) as avg_score,
-        MAX(scored_marks/total_marks*100) as best_score,
-        MIN(scored_marks/total_marks*100) as lowest_score
-      FROM test_records WHERE user_id = 1
-    `);
+    connection = await getConnection();
+
+    // Fetch all subjects data (GS1-4, CSAT, Optional, PSIR)
+    const [subjectsRows] = await connection.execute(`
+      SELECT category, subject, total_lectures, completed_lectures, total_dpps, completed_dpps, revisions
+      FROM subject_progress
+    `) as [any[], any];
+
+    // Fetch daily goals data
+    const [goalsRows] = await connection.execute(`
+      SELECT date, subject, hours_studied, topics_covered, questions_solved
+      FROM daily_goals
+      WHERE date >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
+      ORDER BY date DESC
+    `) as [any[], any];
+
+    // Fetch test records
+    const [testsRows] = await connection.execute(`
+      SELECT test_type, test_category, subject, total_marks, scored_marks, attempt_date
+      FROM test_records
+      WHERE attempt_date >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
+      ORDER BY attempt_date DESC
+    `) as [any[], any];
+
+    // Fetch current affairs progress
+    const [currentAffairsRows] = await connection.execute(`
+      SELECT total_topics, completed_topics, updated_at
+      FROM current_affairs
+      ORDER BY updated_at DESC
+      LIMIT 1
+    `) as [any[], any];
+
+    // Fetch essay progress
+    const [essayRows] = await connection.execute(`
+      SELECT lectures_completed, essays_written, total_lectures, total_essays, updated_at
+      FROM essay_progress
+      ORDER BY updated_at DESC
+      LIMIT 1
+    `) as [any[], any];
+
+    // Fetch optional progress (using correct column names)
+    let optionalRows: any[] = [];
+    try {
+      const [rows] = await connection.execute(`
+        SELECT section_1, section_2, section_3, section_4, test_checkboxes, updated_at
+        FROM optional_progress
+        ORDER BY updated_at DESC
+        LIMIT 1
+      `) as [any[], any];
+      if (rows.length > 0) {
+        const row = rows[0];
+        optionalRows = [
+          { section_name: 'Section 1', completed_checkboxes: row.section_1, total_checkboxes: 140 },
+          { section_name: 'Section 2', completed_checkboxes: row.section_2, total_checkboxes: 140 },
+          { section_name: 'Section 3', completed_checkboxes: row.section_3, total_checkboxes: 140 },
+          { section_name: 'Section 4', completed_checkboxes: row.section_4, total_checkboxes: 140 },
+          { section_name: 'Tests', completed_checkboxes: row.test_checkboxes, total_checkboxes: 500 }
+        ];
+      }
+    } catch (e) {
+      console.log('Optional progress table not found or empty');
+    }
+
+    // Fetch PSIR progress (using correct column names)
+    let psirRows: any[] = [];
+    try {
+      const [rows] = await connection.execute(`
+        SELECT section_1, section_2, section_3, section_4, lecture_checkboxes, test_checkboxes, updated_at
+        FROM psir_progress
+        ORDER BY updated_at DESC
+        LIMIT 1
+      `) as [any[], any];
+      if (rows.length > 0) {
+        const row = rows[0];
+        psirRows = [
+          { section_name: 'PSIR Section 1', completed_checkboxes: row.section_1, total_checkboxes: 150 },
+          { section_name: 'PSIR Section 2', completed_checkboxes: row.section_2, total_checkboxes: 150 },
+          { section_name: 'PSIR Section 3', completed_checkboxes: row.section_3, total_checkboxes: 150 },
+          { section_name: 'PSIR Section 4', completed_checkboxes: row.section_4, total_checkboxes: 150 },
+          { section_name: 'PSIR Lectures', completed_checkboxes: row.lecture_checkboxes, total_checkboxes: 250 },
+          { section_name: 'PSIR Tests', completed_checkboxes: row.test_checkboxes, total_checkboxes: 500 }
+        ];
+      }
+    } catch (e) {
+      console.log('PSIR progress table not found or empty');
+    }
+
+    // Fetch mood entries
+    let moodRows: any[] = [];
+    try {
+      const [rows] = await connection.execute(`
+        SELECT mood, date
+        FROM mood_entries
+        WHERE date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        ORDER BY date DESC
+      `) as [any[], any];
+      moodRows = rows;
+    } catch (e) {
+      console.log('Mood entries table not found or empty');
+    }
 
     await connection.end();
 
-    const subjectsArray = Array.isArray(subjects) ? subjects as any[] : [];
-    const goalsArray = Array.isArray(goals) ? goals as any[] : [];
-    const testsArray = Array.isArray(tests) ? tests as any[] : [];
-    const currentAffairsArray = Array.isArray(currentAffairs) ? currentAffairs as any[] : [];
-    const essayProgressArray = Array.isArray(essayProgress) ? essayProgress as any[] : [];
-    const optionalProgressArray = Array.isArray(optionalProgress) ? optionalProgress as any[] : [];
-    const moodEntriesArray = Array.isArray(moodEntries) ? moodEntries as any[] : [];
-    const totalStatsArray = Array.isArray(totalStats) ? totalStats as any[] : [];
-    const subjectStatsArray = Array.isArray(subjectStats) ? subjectStats as any[] : [];
-    const testStatsArray = Array.isArray(testStats) ? testStats as any[] : [];
-
-    // Compile ALL existing data for comprehensive analysis
-    const comprehensiveData = {
-      subjects: subjectsArray,
-      goals: goalsArray,
-      tests: testsArray,
-      currentAffairs: currentAffairsArray,
-      essay: essayProgressArray,
-      optional: optionalProgressArray,
-      mood: moodEntriesArray,
-      totalStats: totalStatsArray[0] || {},
-      subjectStats: subjectStatsArray[0] || {},
-      testStats: testStatsArray[0] || {},
-      
-      // Calculate existing progress metrics
-      overallProgress: {
-        totalSubjects: subjectsArray.length,
-        completedSubjects: subjectsArray.filter(s => (s.completed_lectures / s.total_lectures) >= 1).length,
-        avgSubjectProgress: subjectsArray.length > 0 ? 
-          subjectsArray.reduce((sum, s) => sum + ((s.completed_lectures / s.total_lectures) + (s.completed_dpps / s.total_dpps)) / 2 * 100, 0) / subjectsArray.length : 0,
-        
-        totalStudyDays: totalStatsArray[0]?.total_study_days || 0,
-        totalStudyHours: totalStatsArray[0]?.total_hours || 0,
-        avgDailyHours: totalStatsArray[0]?.avg_daily_hours || 0,
-        
-        totalTests: testsArray.length,
-        avgTestScore: testStatsArray[0]?.avg_score || 0,
-        bestTestScore: testStatsArray[0]?.best_score || 0,
-        
-        currentAffairsProgress: currentAffairsArray.length > 0 ? 
-          (currentAffairsArray[0].completed_topics / currentAffairsArray[0].total_topics) * 100 : 0,
-        essayProgress: essayProgressArray.length > 0 ? 
-          (essayProgressArray[0].essays_written / essayProgressArray[0].total_essays) * 100 : 0,
-        optionalProgress: optionalProgressArray.length > 0 ? 
-          optionalProgressArray.reduce((sum, o) => sum + (o.completed_items / o.total_items) * 100, 0) / optionalProgressArray.length : 0,
-        
-        studyStreak: calculateStudyStreak(goalsArray),
-        moodTrend: calculateMoodTrend(moodEntriesArray)
-      }
-    };
-
-    const analytics = {
-      performancePrediction: await getAIPerformancePrediction(comprehensiveData),
-      weakAreas: await getAIWeakAreas(comprehensiveData),
-      studyPatterns: analyzeStudyPatterns(goalsArray),
-      timeAllocation: await getAITimeAllocation(comprehensiveData),
-      achievements: generateAchievements(comprehensiveData),
-      reminders: await getAIReminders(comprehensiveData),
-      realTimeData: generateRealTimeChartData(comprehensiveData),
-      
-      // Include ALL existing data for display
-      existingData: {
-        subjects: subjectsArray,
-        totalGoals: goalsArray.length,
-        totalTests: testsArray.length,
-        currentAffairs: currentAffairsArray,
-        essay: essayProgressArray,
-        optional: optionalProgressArray,
-        mood: moodEntriesArray.slice(0, 30),
-        overallProgress: comprehensiveData.overallProgress,
-        statistics: {
-          total: totalStatsArray[0] || {},
-          subjects: subjectStatsArray[0] || {},
-          tests: testStatsArray[0] || {}
-        }
-      }
-    };
+    // Calculate comprehensive analytics
+    const analytics = calculateComprehensiveAnalytics({
+      subjects: subjectsRows,
+      goals: goalsRows,
+      tests: testsRows,
+      currentAffairs: currentAffairsRows[0] || { total_topics: 300, completed_topics: 0 },
+      essay: essayRows[0] || { lectures_completed: 0, essays_written: 0, total_lectures: 50, total_essays: 100 },
+      optional: optionalRows,
+      psir: psirRows,
+      moods: moodRows
+    });
 
     return NextResponse.json(analytics);
+
   } catch (error) {
     console.error('Advanced analytics error:', error);
-    return NextResponse.json({
-      performancePrediction: { score: 0, trend: 'stable', confidence: 0, reasoning: 'No data available' },
-      weakAreas: [],
-      studyPatterns: { consistency: 0, avgDailyHours: 0 },
-      timeAllocation: [],
-      achievements: [],
-      reminders: [],
-      realTimeData: { trendData: [], subjectData: [] }
-    }, { status: 200 });
+    try {
+      await connection?.end();
+    } catch (e) {}
+    return NextResponse.json({ error: 'Failed to fetch analytics' }, { status: 500 });
   }
 }
 
-async function getAIPerformancePrediction(data: any) {
-  try {
-    const totalSubjects = data.subjects.length;
-    const avgSubjectProgress = totalSubjects > 0 ? data.subjects.reduce((sum: number, s: any) => {
-      const lectureProgress = s.total_lectures > 0 ? (s.completed_lectures / s.total_lectures) * 100 : 0;
-      const dppProgress = s.total_dpps > 0 ? (s.completed_dpps / s.total_dpps) * 100 : 0;
-      return sum + (lectureProgress + dppProgress) / 2;
-    }, 0) / totalSubjects : 0;
+function calculateComprehensiveAnalytics(data: any) {
+  const { subjects, goals, tests, currentAffairs, essay, optional, psir, moods } = data;
 
-    const totalStudyHours = data.goals.reduce((sum: number, g: any) => sum + parseFloat(g.hours_studied || 0), 0);
-    const recentStudyHours = data.goals.slice(0, 7).reduce((sum: number, g: any) => sum + parseFloat(g.hours_studied || 0), 0);
-    const avgTestScore = data.tests.length > 0 ? data.tests.reduce((sum: number, t: any) => sum + (t.scored_marks / t.total_marks * 100), 0) / data.tests.length : 0;
-
-    const prompt = `Analyze UPSC preparation and predict performance: Average Progress: ${Math.round(avgSubjectProgress)}%, Study Hours: ${Math.round(recentStudyHours)}h/week, Test Average: ${Math.round(avgTestScore)}%. Respond JSON: {"score": number, "trend": "improving/stable/declining", "confidence": number, "reasoning": "explanation", "recommendations": ["suggestions"]}`;
-
-    const response = await groq.chat.completions.create({
-      messages: [{ role: 'user', content: prompt }],
-      model: 'llama3-8b-8192',
-      temperature: 0.2
-    });
-
-    const result = JSON.parse(response.choices[0]?.message?.content || '{}');
+  // Calculate overall subject progress
+  const totalSubjects = subjects.length;
+  const subjectProgress = subjects.map((s: any) => {
+    const lectureProgress = s.total_lectures > 0 ? (s.completed_lectures / s.total_lectures) * 100 : 0;
+    const dppProgress = s.total_dpps > 0 ? (s.completed_dpps / s.total_dpps) * 100 : 0;
+    const overallProgress = (lectureProgress + dppProgress) / 2;
     return {
-      score: result.score || Math.round(avgSubjectProgress),
-      trend: result.trend || (recentStudyHours > 20 ? 'improving' : 'stable'),
-      confidence: result.confidence || Math.min(data.tests.length * 10 + data.goals.length, 100),
-      reasoning: result.reasoning || `Based on ${Math.round(avgSubjectProgress)}% progress`,
-      recommendations: result.recommendations || ['Focus on weak subjects', 'Increase study hours']
-    };
-  } catch (error) {
-    const fallbackScore = Math.round(
-      (data.subjects.reduce((sum: number, s: any) => sum + ((s.completed_lectures / s.total_lectures) + (s.completed_dpps / s.total_dpps)) / 2 * 100, 0) / Math.max(data.subjects.length, 1))
-    );
-    return { 
-      score: Math.min(fallbackScore, 100), 
-      trend: 'stable', 
-      confidence: 75, 
-      reasoning: 'Calculated based on current progress',
-      recommendations: ['Continue consistent preparation']
-    };
-  }
-}
-
-async function getAIWeakAreas(data: any) {
-  try {
-    const subjectSummary = data.subjects.map((s: any) => ({
       subject: s.subject,
-      progress: Math.round(((s.completed_lectures / s.total_lectures) + (s.completed_dpps / s.total_dpps)) / 2 * 100)
-    }));
+      category: s.category,
+      progress: Math.round(overallProgress),
+      lectureProgress: Math.round(lectureProgress),
+      dppProgress: Math.round(dppProgress)
+    };
+  });
 
-    const prompt = `Identify weak UPSC subjects: ${JSON.stringify(subjectSummary)}. Respond JSON: [{"subject": "name", "progress": number, "priority": "high/medium", "reason": "explanation"}]`;
+  const avgSubjectProgress = subjectProgress.reduce((sum: number, s: any) => sum + s.progress, 0) / totalSubjects;
 
-    const response = await groq.chat.completions.create({
-      messages: [{ role: 'user', content: prompt }],
-      model: 'llama3-8b-8192',
-      temperature: 0.3
-    });
+  // Calculate study consistency from goals
+  const studyDays = new Set(goals.map((g: any) => {
+    const dateStr = g.date instanceof Date ? g.date.toISOString() : String(g.date);
+    return dateStr.split('T')[0];
+  })).size;
+  const totalDays = 90; // Last 90 days
+  const consistency = Math.round((studyDays / totalDays) * 100);
 
-    return JSON.parse(response.choices[0]?.message?.content || '[]');
-  } catch (error) {
-    return data.subjects.filter((s: any) => ((s.completed_lectures / s.total_lectures) + (s.completed_dpps / s.total_dpps)) / 2 * 100 < 50).slice(0, 5);
-  }
-}
+  // Calculate total study hours
+  const totalStudyHours = goals.reduce((sum: number, g: any) => sum + parseFloat(g.hours_studied), 0);
+  const avgDailyHours = totalStudyHours / studyDays || 0;
 
-function analyzeStudyPatterns(goals: any[]) {
-  const studyDays = goals.filter(g => parseFloat(g.hours_studied) > 0).length;
-  const totalDays = Math.min(goals.length, 30);
-  const consistency = totalDays > 0 ? (studyDays / totalDays) * 100 : 0;
+  // Calculate test performance
+  const totalTests = tests.length;
+  const avgTestScore = tests.length > 0 
+    ? tests.reduce((sum: number, t: any) => sum + (t.scored_marks / t.total_marks) * 100, 0) / tests.length
+    : 0;
+
+  // Calculate current affairs progress
+  const currentAffairsProgress = currentAffairs.total_topics > 0 
+    ? (currentAffairs.completed_topics / currentAffairs.total_topics) * 100 
+    : 0;
+
+  // Calculate essay progress
+  const essayLectureProgress = essay.total_lectures > 0 
+    ? (essay.lectures_completed / essay.total_lectures) * 100 
+    : 0;
+  const essayWritingProgress = essay.total_essays > 0 
+    ? (essay.essays_written / essay.total_essays) * 100 
+    : 0;
+
+  // Calculate optional progress
+  const optionalProgress = optional.length > 0 
+    ? optional.reduce((sum: number, opt: any) => {
+        const progress = opt.total_checkboxes > 0 ? (opt.completed_checkboxes / opt.total_checkboxes) * 100 : 0;
+        return sum + progress;
+      }, 0) / optional.length
+    : 0;
+
+  // Calculate PSIR progress
+  const psirProgress = psir.length > 0 
+    ? psir.reduce((sum: number, p: any) => {
+        const progress = p.total_checkboxes > 0 ? (p.completed_checkboxes / p.total_checkboxes) * 100 : 0;
+        return sum + progress;
+      }, 0) / psir.length
+    : 0;
+
+  // Calculate mood analysis
+  const moodAnalysis = analyzeMoods(moods);
+
+  // Generate AI prediction based on all data
+  const prediction = generateAIPrediction({
+    avgSubjectProgress,
+    consistency,
+    avgTestScore,
+    currentAffairsProgress,
+    essayProgress: (essayLectureProgress + essayWritingProgress) / 2,
+    optionalProgress,
+    psirProgress,
+    moodScore: moodAnalysis.averageScore,
+    totalStudyHours,
+    avgDailyHours
+  });
+
+  // Identify weak areas
+  const weakAreas = identifyWeakAreas({
+    subjects: subjectProgress,
+    currentAffairsProgress,
+    essayLectureProgress,
+    essayWritingProgress,
+    optionalProgress,
+    psirProgress,
+    consistency,
+    avgTestScore
+  });
+
+  // Generate trend data for charts
+  const trendData = generateTrendData(goals, tests);
 
   return {
-    consistency: Math.round(consistency),
-    avgDailyHours: goals.length > 0 ? goals.reduce((sum, g) => sum + parseFloat(g.hours_studied || 0), 0) / goals.length : 0
+    performancePrediction: prediction,
+    existingData: {
+      overallProgress: {
+        totalSubjects,
+        avgSubjectProgress: Math.round(avgSubjectProgress),
+        totalStudyHours: Math.round(totalStudyHours),
+        avgTestScore: Math.round(avgTestScore)
+      },
+      totalTests,
+      currentAffairsProgress: Math.round(currentAffairsProgress),
+      essayProgress: {
+        lectures: Math.round(essayLectureProgress),
+        writing: Math.round(essayWritingProgress)
+      },
+      optionalProgress: Math.round(optionalProgress),
+      psirProgress: Math.round(psirProgress)
+    },
+    studyPatterns: {
+      consistency,
+      avgDailyHours: Math.round(avgDailyHours * 10) / 10
+    },
+    weakAreas,
+    moodAnalysis,
+    realTimeData: {
+      trendData,
+      subjectData: subjectProgress.slice(0, 6) // Top 6 for pie chart
+    }
   };
 }
 
-async function getAITimeAllocation(data: any) {
-  try {
-    const subjectSummary = data.subjects.map((s: any) => ({
-      subject: s.subject,
-      progress: Math.round(((s.completed_lectures / s.total_lectures) + (s.completed_dpps / s.total_dpps)) / 2 * 100)
-    }));
+function generateAIPrediction(metrics: any) {
+  const {
+    avgSubjectProgress,
+    consistency,
+    avgTestScore,
+    currentAffairsProgress,
+    essayProgress,
+    optionalProgress,
+    psirProgress,
+    moodScore,
+    totalStudyHours,
+    avgDailyHours
+  } = metrics;
 
-    const prompt = `Recommend UPSC study time allocation for: ${JSON.stringify(subjectSummary)}. Total: 8h/day. Respond JSON: [{"subject": "name", "recommendedHours": number, "reason": "explanation"}]`;
+  // Weighted scoring algorithm
+  const weights = {
+    subjectProgress: 0.18,
+    consistency: 0.16,
+    testScore: 0.16,
+    optional: 0.13,
+    psir: 0.12,
+    currentAffairs: 0.10,
+    essay: 0.10,
+    mood: 0.03,
+    studyHours: 0.02
+  };
 
-    const response = await groq.chat.completions.create({
-      messages: [{ role: 'user', content: prompt }],
-      model: 'llama3-8b-8192',
-      temperature: 0.3
-    });
+  const normalizedHours = Math.min(totalStudyHours / 500, 1) * 100; // Normalize to 500 hours target
 
-    return JSON.parse(response.choices[0]?.message?.content || '[]');
-  } catch (error) {
-    return data.subjects.map((s: any) => ({ subject: s.subject, recommendedHours: 1.5, reason: 'Standard allocation' }));
+  const weightedScore = 
+    (avgSubjectProgress * weights.subjectProgress) +
+    (consistency * weights.consistency) +
+    (avgTestScore * weights.testScore) +
+    (optionalProgress * weights.optional) +
+    (psirProgress * weights.psir) +
+    (currentAffairsProgress * weights.currentAffairs) +
+    (essayProgress * weights.essay) +
+    (moodScore * weights.mood) +
+    (normalizedHours * weights.studyHours);
+
+  const finalScore = Math.min(Math.max(Math.round(weightedScore), 0), 100);
+
+  // Determine trend
+  let trend = 'stable';
+  if (consistency > 70 && avgDailyHours > 4) trend = 'improving';
+  else if (consistency < 50 || avgDailyHours < 2) trend = 'declining';
+
+  // Calculate confidence based on data completeness
+  const dataCompleteness = [
+    avgSubjectProgress > 0 ? 1 : 0,
+    consistency > 0 ? 1 : 0,
+    avgTestScore > 0 ? 1 : 0,
+    optionalProgress > 0 ? 1 : 0,
+    psirProgress > 0 ? 1 : 0,
+    currentAffairsProgress > 0 ? 1 : 0,
+    essayProgress > 0 ? 1 : 0,
+    moodScore > 0 ? 1 : 0
+  ].reduce((sum, val) => sum + val, 0);
+
+  const confidence = Math.round((dataCompleteness / 8) * 100);
+
+  // Generate recommendations
+  const recommendations = generateRecommendations(metrics);
+
+  // Generate reasoning
+  const reasoning = generateReasoning(metrics, finalScore);
+
+  return {
+    score: finalScore,
+    trend,
+    confidence,
+    reasoning,
+    recommendations
+  };
+}
+
+function analyzeMoods(moods: any[]) {
+  if (moods.length === 0) {
+    return { averageScore: 50, distribution: {}, trend: 'neutral' };
   }
-}
 
-function generateAchievements(data: any) {
-  const achievements = [];
-  
-  const recentDays = data.goals.slice(0, 7).filter((g: any) => parseFloat(g.hours_studied) > 0).length;
-  if (recentDays >= 7) achievements.push({ type: 'streak', message: '7-day study streak!', icon: '🔥' });
-  
-  data.subjects.forEach((s: any) => {
-    const lectureProgress = (s.completed_lectures / s.total_lectures) * 100;
-    if (lectureProgress >= 100) {
-      achievements.push({ type: 'completion', message: `${s.subject} lectures completed!`, icon: '🎉' });
-    }
-  });
-  
-  return achievements;
-}
+  const moodScores: { [key: string]: number } = {
+    'excited': 90, 'confident': 85, 'motivated': 80, 'focused': 75,
+    'calm': 70, 'neutral': 50, 'tired': 40, 'stressed': 30,
+    'overwhelmed': 25, 'frustrated': 20, 'anxious': 15, 'burnt-out': 10
+  };
 
-async function getAIReminders(data: any) {
-  try {
-    const recentActivity = data.goals.slice(0, 3).map((g: any) => `${g.date}: ${g.hours_studied}h`).join(', ');
-    const prompt = `Generate UPSC study reminders based on: ${recentActivity}. Respond JSON: [{"type": "study", "message": "reminder text", "priority": "high/medium/low"}]`;
+  const totalScore = moods.reduce((sum, mood) => sum + (moodScores[mood.mood] || 50), 0);
+  const averageScore = totalScore / moods.length;
 
-    const response = await groq.chat.completions.create({
-      messages: [{ role: 'user', content: prompt }],
-      model: 'llama3-8b-8192',
-      temperature: 0.7
-    });
-
-    return JSON.parse(response.choices[0]?.message?.content || '[]');
-  } catch (error) {
-    return [{ type: 'study', message: 'Continue your preparation consistently!', priority: 'medium' }];
-  }
-}
-
-function generateRealTimeChartData(data: any) {
-  // Generate real trend data from ALL goals
-  const monthlyData = data.goals.reduce((acc: any, goal: any) => {
-    const date = new Date(goal.date);
-    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    const monthLabel = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-    
-    if (!acc[monthKey]) {
-      acc[monthKey] = { month: monthLabel, score: 0, hours: 0, topics: 0, sessions: 0 };
-    }
-    acc[monthKey].hours += parseFloat(goal.hours_studied || 0);
-    acc[monthKey].topics += parseInt(goal.topics_covered || 0);
-    acc[monthKey].sessions += 1;
+  const distribution = moods.reduce((acc: any, mood) => {
+    acc[mood.mood] = (acc[mood.mood] || 0) + 1;
     return acc;
   }, {});
 
-  // Calculate performance score based on actual data
-  const trendData = Object.values(monthlyData)
-    .sort((a: any, b: any) => a.month.localeCompare(b.month))
-    .map((m: any) => ({
-      month: m.month,
-      score: Math.min(Math.round((m.hours / m.sessions) * 10 + (m.topics / m.sessions) * 2), 100),
-      hours: Math.round(m.hours),
-      topics: Math.round(m.topics),
-      sessions: m.sessions
-    }))
-    .slice(-6); // Last 6 months
-
-  // Generate real subject data with actual progress
-  const subjectData = data.subjects.map((s: any, index: number) => ({
-    subject: s.subject,
-    category: s.category,
-    lectureProgress: Math.round((s.completed_lectures / s.total_lectures) * 100),
-    dppProgress: Math.round((s.completed_dpps / s.total_dpps) * 100),
-    progress: Math.round(((s.completed_lectures / s.total_lectures) + (s.completed_dpps / s.total_dpps)) / 2 * 100),
-    revisions: s.revisions,
-    color: ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#8B5A2B', '#FF6B6B'][index % 8]
-  }));
-
-  return { trendData, subjectData };
+  return { averageScore, distribution, trend: averageScore > 60 ? 'positive' : 'needs_attention' };
 }
 
-function calculateStudyStreak(goals: any[]) {
-  let streak = 0;
-  const sortedGoals = goals.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  
-  for (let i = 0; i < sortedGoals.length; i++) {
-    if (parseFloat(sortedGoals[i].hours_studied || 0) > 0) {
-      streak++;
-    } else {
-      break;
+function identifyWeakAreas(data: any) {
+  const { subjects, currentAffairsProgress, essayLectureProgress, essayWritingProgress, optionalProgress, psirProgress, consistency, avgTestScore } = data;
+  const weakAreas = [];
+
+  // Subject-wise weak areas
+  subjects.forEach((subject: any) => {
+    if (subject.progress < 30) {
+      weakAreas.push({
+        subject: subject.subject,
+        category: subject.category,
+        progress: subject.progress,
+        priority: subject.progress < 15 ? 'high' : 'medium',
+        reason: 'Low completion rate'
+      });
     }
+  });
+
+  // Other weak areas
+  if (currentAffairsProgress < 25) {
+    weakAreas.push({
+      subject: 'Current Affairs',
+      category: 'Special',
+      progress: Math.round(currentAffairsProgress),
+      priority: 'high',
+      reason: 'Critical for both Prelims and Mains'
+    });
   }
-  return streak;
+
+  if (essayLectureProgress < 30) {
+    weakAreas.push({
+      subject: 'Essay Lectures',
+      category: 'Essay',
+      progress: Math.round(essayLectureProgress),
+      priority: 'medium',
+      reason: 'Foundation for essay writing'
+    });
+  }
+
+  if (optionalProgress < 25) {
+    weakAreas.push({
+      subject: 'Optional Subject',
+      category: 'Optional',
+      progress: Math.round(optionalProgress),
+      priority: 'high',
+      reason: 'Optional subject crucial for Mains'
+    });
+  }
+
+  if (psirProgress < 25) {
+    weakAreas.push({
+      subject: 'PSIR',
+      category: 'Optional',
+      progress: Math.round(psirProgress),
+      priority: 'high',
+      reason: 'PSIR optional subject needs attention'
+    });
+  }
+
+  if (consistency < 50) {
+    weakAreas.push({
+      subject: 'Study Consistency',
+      category: 'Habit',
+      progress: consistency,
+      priority: 'high',
+      reason: 'Irregular study pattern detected'
+    });
+  }
+
+  return weakAreas.sort((a, b) => {
+    if (a.priority === 'high' && b.priority !== 'high') return -1;
+    if (b.priority === 'high' && a.priority !== 'high') return 1;
+    return a.progress - b.progress;
+  });
 }
 
-function calculateMoodTrend(moodEntries: any[]) {
-  if (moodEntries.length === 0) return 50;
+function generateRecommendations(metrics: any) {
+  const recommendations = [];
+  const { avgSubjectProgress, consistency, avgTestScore, currentAffairsProgress, essayProgress, optionalProgress, psirProgress, avgDailyHours } = metrics;
+
+  if (consistency < 70) {
+    recommendations.push("Establish a consistent daily study routine. Aim for at least 6 days per week.");
+  }
+
+  if (avgDailyHours < 4) {
+    recommendations.push("Increase daily study hours to 4-6 hours for optimal UPSC preparation.");
+  }
+
+  if (avgSubjectProgress < 40) {
+    recommendations.push("Focus on completing basic lectures before moving to advanced topics.");
+  }
+
+  if (avgTestScore < 60) {
+    recommendations.push("Increase test frequency and focus on answer writing practice.");
+  }
+
+  if (currentAffairsProgress < 30) {
+    recommendations.push("Dedicate 1 hour daily to current affairs. It's crucial for both Prelims and Mains.");
+  }
+
+  if (essayProgress < 25) {
+    recommendations.push("Start essay writing practice immediately. Write at least 2 essays per week.");
+  }
+
+  if (optionalProgress < 30) {
+    recommendations.push("Focus on optional subject preparation. It's crucial for Mains scoring.");
+  }
+
+  if (psirProgress < 30) {
+    recommendations.push("Increase PSIR optional subject study time. Balance theory with current events.");
+  }
+
+  return recommendations;
+}
+
+function generateReasoning(metrics: any, finalScore: number) {
+  const { avgSubjectProgress, consistency, avgTestScore } = metrics;
   
-  const recentMoods = moodEntries.slice(0, 7);
-  const positiveMoods = recentMoods.filter(m => ['happy', 'motivated', 'confident', 'excited'].includes(m.mood?.toLowerCase()));
+  let reasoning = `Based on comprehensive analysis of your preparation data, `;
   
-  return Math.round((positiveMoods.length / recentMoods.length) * 100);
+  if (finalScore >= 70) {
+    reasoning += `you're on an excellent track with strong performance across multiple areas. `;
+  } else if (finalScore >= 50) {
+    reasoning += `you're making good progress but there's room for improvement in key areas. `;
+  } else {
+    reasoning += `your preparation needs significant enhancement to meet UPSC standards. `;
+  }
+
+  reasoning += `Your study consistency of ${consistency}% and average subject progress of ${Math.round(avgSubjectProgress)}% are key factors in this assessment.`;
+
+  return reasoning;
+}
+
+function generateTrendData(goals: any[], tests: any[]) {
+  const monthlyData: { [key: string]: any } = {};
+  
+  // Process goals data
+  goals.forEach(goal => {
+    const month = new Date(goal.date).toLocaleDateString('en-US', { month: 'short' });
+    if (!monthlyData[month]) {
+      monthlyData[month] = { month, hours: 0, topics: 0, score: 0, testCount: 0 };
+    }
+    monthlyData[month].hours += parseFloat(goal.hours_studied);
+    monthlyData[month].topics += parseInt(goal.topics_covered);
+  });
+
+  // Process test data
+  tests.forEach(test => {
+    const month = new Date(test.attempt_date).toLocaleDateString('en-US', { month: 'short' });
+    if (!monthlyData[month]) {
+      monthlyData[month] = { month, hours: 0, topics: 0, score: 0, testCount: 0 };
+    }
+    monthlyData[month].score += (test.scored_marks / test.total_marks) * 100;
+    monthlyData[month].testCount += 1;
+  });
+
+  // Calculate averages
+  Object.keys(monthlyData).forEach(month => {
+    if (monthlyData[month].testCount > 0) {
+      monthlyData[month].score = Math.round(monthlyData[month].score / monthlyData[month].testCount);
+    }
+    monthlyData[month].hours = Math.round(monthlyData[month].hours);
+  });
+
+  return Object.values(monthlyData).slice(-6); // Last 6 months
 }

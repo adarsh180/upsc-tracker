@@ -40,6 +40,19 @@ export default function PredictionCard() {
     }
   };
 
+  const getTrendIcon = (trend: string) => {
+    switch (trend) {
+      case 'improving': return '↗️';
+      case 'declining': return '↘️';
+      default: return '→';
+    }
+  };
+
+  const getTrendDisplay = (trend: string) => {
+    const icon = getTrendIcon(trend);
+    return `${icon} ${trend}`;
+  };
+
   const getScoreColor = (score: number) => {
     if (score >= 70) return 'text-green-400';
     if (score >= 50) return 'text-yellow-400';
@@ -80,14 +93,14 @@ export default function PredictionCard() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className={`text-3xl font-bold ${getScoreColor(analytics.performancePrediction.score)}`}>
-                    {analytics.performancePrediction.score}%
+                  <div className={`text-3xl font-bold ${getScoreColor(analytics.performancePrediction?.score || 0)}`}>
+                    {analytics.performancePrediction?.score || 0}%
                   </div>
                   <div className="text-sm text-gray-400">Predicted Score</div>
                 </div>
                 <div className="text-right">
-                  <div className={`text-lg font-medium ${getTrendColor(analytics.performancePrediction.trend)}`}>
-                    {analytics.performancePrediction.trend}
+                  <div className={`text-lg font-medium ${getTrendColor(analytics.performancePrediction?.trend || 'stable')}`}>
+                    {getTrendDisplay(analytics.performancePrediction?.trend || 'stable')}
                   </div>
                   <div className="text-sm text-gray-400">Trend</div>
                 </div>
@@ -98,11 +111,11 @@ export default function PredictionCard() {
                   <motion.div
                     className="bg-gradient-to-r from-blue-400 to-purple-400 h-2 rounded-full"
                     initial={{ width: 0 }}
-                    animate={{ width: `${Math.min(Math.max(analytics.performancePrediction.confidence || 0, 0), 100)}%` }}
+                    animate={{ width: `${Math.min(Math.max(analytics.performancePrediction?.score || 0, 0), 100)}%` }}
                     transition={{ duration: 1.5, ease: "easeOut" }}
                   />
                 </div>
-                <span className="text-sm text-purple-400">{Math.min(Math.max(analytics.performancePrediction.confidence || 0, 0), 100)}%</span>
+                <span className="text-sm text-purple-400">Progress: {Math.min(Math.max(analytics.performancePrediction?.score || 0, 0), 100)}%</span>
               </div>
 
               <div className="text-xs text-gray-400 bg-white/5 rounded p-2">
@@ -203,16 +216,16 @@ export default function PredictionCard() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   <GlassCard className="text-center">
                     <Target className="w-8 h-8 text-blue-400 mx-auto mb-3" />
-                    <div className={`text-3xl font-bold ${getScoreColor(analytics.performancePrediction.score)}`}>
-                      {analytics.performancePrediction.score}%
+                    <div className={`text-3xl font-bold ${getScoreColor(analytics.performancePrediction?.score || 0)}`}>
+                      {analytics.performancePrediction?.score || 0}%
                     </div>
                     <div className="text-sm text-gray-400">AI Predicted Score</div>
                   </GlassCard>
 
                   <GlassCard className="text-center">
-                    <TrendingUp className={`w-8 h-8 mx-auto mb-3 ${getTrendColor(analytics.performancePrediction.trend)}`} />
-                    <div className={`text-xl font-bold ${getTrendColor(analytics.performancePrediction.trend)}`}>
-                      {analytics.performancePrediction.trend}
+                    <TrendingUp className={`w-8 h-8 mx-auto mb-3 ${getTrendColor(analytics.performancePrediction?.trend || 'stable')}`} />
+                    <div className={`text-xl font-bold ${getTrendColor(analytics.performancePrediction?.trend || 'stable')}`}>
+                      {getTrendDisplay(analytics.performancePrediction?.trend || 'stable')}
                     </div>
                     <div className="text-sm text-gray-400">Performance Trend</div>
                   </GlassCard>
@@ -220,7 +233,7 @@ export default function PredictionCard() {
                   <GlassCard className="text-center">
                     <Award className="w-8 h-8 text-purple-400 mx-auto mb-3" />
                     <div className="text-3xl font-bold text-purple-400">
-                      {analytics.performancePrediction.confidence}%
+                      {analytics.performancePrediction?.confidence || 0}%
                     </div>
                     <div className="text-sm text-gray-400">AI Confidence</div>
                   </GlassCard>
@@ -228,7 +241,7 @@ export default function PredictionCard() {
                   <GlassCard className="text-center">
                     <Clock className="w-8 h-8 text-green-400 mx-auto mb-3" />
                     <div className="text-3xl font-bold text-green-400">
-                      {analytics.studyPatterns.consistency}%
+                      {analytics.studyPatterns?.consistency || 0}%
                     </div>
                     <div className="text-sm text-gray-400">Study Consistency</div>
                   </GlassCard>
@@ -353,7 +366,7 @@ export default function PredictionCard() {
                       <h3 className="text-xl font-semibold text-red-400">Areas Needing Attention</h3>
                     </div>
                     <div className="space-y-3">
-                      {analytics.weakAreas.slice(0, 5).map((area: any, index: number) => (
+                      {(analytics.weakAreas || []).slice(0, 5).map((area: any, index: number) => (
                         <div key={index} className="flex justify-between items-center p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
                           <div>
                             <div className="font-medium text-white">{area.subject}</div>
@@ -380,14 +393,18 @@ export default function PredictionCard() {
                       <h3 className="text-xl font-semibold text-blue-400">AI Recommendations</h3>
                     </div>
                     <div className="space-y-3">
-                      {analytics.performancePrediction.recommendations?.map((rec: string, index: number) => (
+                      {analytics.performancePrediction?.recommendations?.map((rec: string, index: number) => (
                         <div key={index} className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
                           <div className="text-white text-sm">{rec}</div>
                         </div>
-                      ))}
+                      )) || (
+                        <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                          <div className="text-white text-sm">Loading recommendations...</div>
+                        </div>
+                      )}
                       <div className="p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-lg">
                         <div className="text-sm text-gray-300">
-                          <strong className="text-blue-400">AI Analysis:</strong> {analytics.performancePrediction.reasoning}
+                          <strong className="text-blue-400">AI Analysis:</strong> {analytics.performancePrediction?.reasoning || 'Analyzing your preparation data...'}
                         </div>
                       </div>
                     </div>
