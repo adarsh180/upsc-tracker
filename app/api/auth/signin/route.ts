@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const ADMIN_EMAIL = 'tiwariadarsh0704@gmail.com';
-const ADMIN_PASSWORD = 'Adarsh0704$$';
-
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();
+
+    // Hardcoded credentials
+    const ADMIN_EMAIL = 'tiwariadarsh0704@gmail.com';
+    const ADMIN_PASSWORD = 'Adarsh0704$$';
 
     if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
       return NextResponse.json({ 

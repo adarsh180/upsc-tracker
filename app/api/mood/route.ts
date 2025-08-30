@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const connection = await getConnection();
     
-    // Create table first
+    // Ensure table exists
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS mood_entries (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -20,51 +22,35 @@ export async function GET() {
     `);
     
     const [rows] = await connection.execute(
-      'SELECT * FROM mood_entries WHERE user_id = 1 ORDER BY date DESC'
+      'SELECT * FROM mood_entries WHERE user_id = 1 ORDER BY date DESC LIMIT 30'
     );
+    
     await connection.end();
     
-    return NextResponse.json({ data: rows });
+    return NextResponse.json(Array.isArray(rows) ? rows : []);
   } catch (error) {
     console.error('Database error:', error);
-    return NextResponse.json({ error: 'Failed to fetch mood entries' }, { status: 500 });
+    return NextResponse.json([], { status: 200 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { date, mood, note } = await request.json();
-    
-    // Convert date to IST if needed
-    const istDate = new Date(date);
-    // Format date as YYYY-MM-DD
-    const formattedDate = istDate.toISOString().split('T')[0];
+    const body = await request.json();
+    const { date, mood, note } = body;
     
     const connection = await getConnection();
     
-    // Create table first
-    await connection.execute(`
-      CREATE TABLE IF NOT EXISTS mood_entries (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL DEFAULT 1,
-        date DATE NOT NULL,
-        mood VARCHAR(50) NOT NULL,
-        note TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        UNIQUE KEY unique_user_date (user_id, date)
-      )
-    `);
-    
-    await connection.execute(
-      'INSERT INTO mood_entries (user_id, date, mood, note) VALUES (1, ?, ?, ?) ON DUPLICATE KEY UPDATE mood = ?, note = ?, updated_at = CURRENT_TIMESTAMP',
-      [formattedDate, mood, note || null, mood, note || null]
+    const [result] = await connection.execute(
+      'INSERT INTO mood_entries (user_id, date, mood, note) VALUES (1, ?, ?, ?) ON DUPLICATE KEY UPDATE mood = ?, note = ?',
+      [date, mood, note || '', mood, note || '']
     );
+    
     await connection.end();
     
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, id: (result as any).insertId });
   } catch (error) {
     console.error('Database error:', error);
-    return NextResponse.json({ error: 'Failed to save mood' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to save mood entry' }, { status: 500 });
   }
 }

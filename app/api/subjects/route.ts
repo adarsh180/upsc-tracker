@@ -119,6 +119,13 @@ export async function PUT(request: NextRequest) {
         );
       }
     } else {
+      // Validate field name to prevent SQL injection
+      const allowedFields = ['total_lectures', 'completed_lectures', 'total_dpps', 'completed_dpps', 'revisions', 'questions_count'];
+      if (!allowedFields.includes(field)) {
+        releaseConnection(connection);
+        return NextResponse.json({ error: 'Invalid field name' }, { status: 400 });
+      }
+      
       await connection.execute(
         `UPDATE subject_progress SET ${field} = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
         [value, id]

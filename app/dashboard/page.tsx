@@ -3,23 +3,16 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Plus, BarChart3, Calendar, BookOpen, FileText, Target, LogOut } from 'lucide-react';
+import { LogOut, Brain, Sparkles } from 'lucide-react';
 import Link from 'next/link';
-import SubjectCard from '@/components/SubjectCard';
 import GlassCard from '@/components/GlassCard';
 import AIInsights from '@/components/AIInsights';
-import CurrentAffairsSection from '@/components/CurrentAffairsSection';
-import EssaySection from '@/components/EssaySection';
-import OptionalSection from '@/components/OptionalSection';
 import CategoryCard from '@/components/CategoryCard';
 import SpecialCategoryCard from '@/components/SpecialCategoryCard';
 import MoodCalendar from '@/components/MoodCalendar';
 import ProgressTrackerCard from '@/components/ProgressTrackerCard';
 import CountdownTimer from '@/components/CountdownTimer';
-
 import MotivationCard from '@/components/MotivationCard';
-import AdvancedAnalytics from '@/components/AdvancedAnalytics';
-import PredictionCard from '@/components/PredictionCard';
 import { SubjectProgress } from '@/types';
 
 export default function Dashboard() {
@@ -53,11 +46,11 @@ export default function Dashboard() {
         await fetch('/api/subjects/init', { method: 'POST' });
         setInitialized(true);
       }
-      
+
       // Fetch subjects
       const response = await fetch('/api/subjects');
       const data = await response.json();
-      
+
       // Ensure uniqueness by using subject and category as key
       const uniqueSubjects = Object.values(
         data.reduce((acc: { [key: string]: SubjectProgress }, curr: SubjectProgress) => {
@@ -68,7 +61,7 @@ export default function Dashboard() {
           return acc;
         }, {})
       ) as SubjectProgress[];
-      
+
       setSubjects(uniqueSubjects);
     } catch (error) {
       console.error('Failed to initialize:', error);
@@ -89,7 +82,7 @@ export default function Dashboard() {
         throw new Error('Failed to update subject');
       }
 
-      setSubjects(prev => prev.map(subject => 
+      setSubjects(prev => prev.map(subject =>
         subject.id === id ? { ...subject, [field]: value, updated_at: new Date().toISOString() } : subject
       ));
     } catch (error) {
@@ -129,7 +122,7 @@ export default function Dashboard() {
       >
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-6 mb-8">
           <div className="space-y-3">
-            <motion.h1 
+            <motion.h1
               className="text-5xl md:text-6xl font-black gradient-text tracking-tight"
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
@@ -137,7 +130,7 @@ export default function Dashboard() {
             >
               Dashboard
             </motion.h1>
-            <motion.p 
+            <motion.p
               className="text-xl text-neutral-300 leading-relaxed"
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
@@ -155,15 +148,27 @@ export default function Dashboard() {
               <span>Live tracking • Real-time analytics</span>
             </motion.div>
           </div>
-          
-          <motion.div 
+
+          <motion.div
             className="flex gap-3"
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.5 }}
           >
+            <Link href="/dashboard/ai">
+              <GlassCard
+                className="px-4 py-2 cursor-pointer bg-gradient-to-br from-purple-500/10 to-indigo-500/5 border-purple-400/20 hover:border-purple-400/30 group"
+                size="sm"
+                hover={true}
+              >
+                <div className="flex items-center gap-2">
+                  <Brain className="w-4 h-4 text-purple-400 group-hover:text-purple-300 transition-colors" />
+                  <span className="text-sm font-medium text-purple-400 group-hover:text-purple-300 transition-colors">AI Assistant</span>
+                </div>
+              </GlassCard>
+            </Link>
             <Link href="/dashboard/tests">
-              <GlassCard 
+              <GlassCard
                 className="px-4 py-2 cursor-pointer bg-gradient-to-br from-indigo-500/10 to-blue-500/5 border-indigo-400/20 hover:border-indigo-400/30 group"
                 size="sm"
                 hover={true}
@@ -172,25 +177,16 @@ export default function Dashboard() {
               </GlassCard>
             </Link>
             <Link href="/dashboard/goals">
-              <GlassCard 
-                className="px-4 py-2 cursor-pointer bg-gradient-to-br from-purple-500/10 to-pink-500/5 border-purple-400/20 hover:border-purple-400/30 group"
-                size="sm"
-                hover={true}
-              >
-                <span className="text-sm font-medium text-purple-400 group-hover:text-purple-300 transition-colors">Goals</span>
-              </GlassCard>
-            </Link>
-            <Link href="/dashboard/analysis">
-              <GlassCard 
+              <GlassCard
                 className="px-4 py-2 cursor-pointer bg-gradient-to-br from-green-500/10 to-emerald-500/5 border-green-400/20 hover:border-green-400/30 group"
                 size="sm"
                 hover={true}
               >
-                <span className="text-sm font-medium text-green-400 group-hover:text-green-300 transition-colors">Analysis</span>
+                <span className="text-sm font-medium text-green-400 group-hover:text-green-300 transition-colors">Goals</span>
               </GlassCard>
             </Link>
             <button onClick={handleSignOut}>
-              <GlassCard 
+              <GlassCard
                 className="p-4 cursor-pointer bg-gradient-to-br from-red-500/10 to-pink-500/5 border-red-400/20 hover:border-red-400/30 group"
                 size="sm"
                 hover={true}
@@ -202,7 +198,7 @@ export default function Dashboard() {
         </div>
 
         {/* Countdown Timers */}
-        <motion.div 
+        <motion.div
           className="grid md:grid-cols-2 gap-8 mb-10"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -219,9 +215,9 @@ export default function Dashboard() {
             color="text-purple-400"
           />
         </motion.div>
-        
+
         {/* Motivation Banner */}
-        <motion.div 
+        <motion.div
           className="mb-12"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -241,7 +237,7 @@ export default function Dashboard() {
             'GS4': { icon: <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-sm">4</div>, color: 'text-blue-400' },
             'CSAT': { icon: <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-sm">C</div>, color: 'text-blue-400' }
           }[category] || { icon: <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-sm">?</div>, color: 'text-blue-400' };
-          
+
           return (
             <motion.div
               key={category}
@@ -265,24 +261,70 @@ export default function Dashboard() {
         })}
       </div>
 
-      {/* AI Insights */}
+      {/* AI Assistant Section Card */}
       <motion.div
         className="mb-12"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
       >
-        <AIInsights progressData={subjects} />
+        <Link href="/dashboard/ai">
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <GlassCard className="cursor-pointer bg-gradient-to-br from-purple-500/10 via-indigo-500/5 to-blue-500/10 border-purple-400/20 hover:border-purple-400/30 group">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <motion.div
+                    className="p-3 rounded-2xl bg-gradient-to-br from-purple-500/20 to-indigo-500/20 border border-purple-400/20"
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                  >
+                    <Brain className="w-8 h-8 text-purple-400" />
+                  </motion.div>
+                  <div>
+                    <h3 className="text-2xl font-bold gradient-text-primary">AI Study Assistant</h3>
+                    <p className="text-sm text-neutral-400">Intelligent recommendations • Performance prediction • Smart questions</p>
+                  </div>
+                </div>
+                <motion.div
+                  className="text-purple-400 group-hover:text-purple-300 group-hover:translate-x-1 transition-all duration-300"
+                  whileHover={{ scale: 1.1 }}
+                >
+                  <Sparkles className="w-6 h-6" />
+                </motion.div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="text-center p-4 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-all duration-300">
+                  <Brain className="w-6 h-6 text-purple-400 mx-auto mb-2" />
+                  <div className="text-xs text-neutral-400 font-medium">Smart Analysis</div>
+                </div>
+                <div className="text-center p-4 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-all duration-300">
+                  <Sparkles className="w-6 h-6 text-indigo-400 mx-auto mb-2" />
+                  <div className="text-xs text-neutral-400 font-medium">Predictions</div>
+                </div>
+                <div className="text-center p-4 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-all duration-300">
+                  <Brain className="w-6 h-6 text-blue-400 mx-auto mb-2" />
+                  <div className="text-xs text-neutral-400 font-medium">Questions</div>
+                </div>
+              </div>
+
+              <div className="text-center py-4 border-t border-white/10">
+                <p className="text-neutral-300 text-sm leading-relaxed">
+                  Experience AI-powered study recommendations, performance predictions, and intelligent question generation
+                </p>
+              </div>
+            </GlassCard>
+          </motion.div>
+        </Link>
       </motion.div>
 
-      {/* AI Prediction Card */}
+      {/* Basic AI Insights */}
       <motion.div
         className="mb-12"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
       >
-        <PredictionCard />
+        <AIInsights progressData={subjects} />
       </motion.div>
 
       {/* Special Sections */}

@@ -1,18 +1,37 @@
 import mysql from 'mysql2/promise';
 
 export async function getConnection() {
-  return await mysql.createConnection(process.env.DATABASE_URL!);
+  try {
+    // Validate required environment variables
+    if (!process.env.DATABASE_URL) {
+      throw new Error('Missing DATABASE_URL configuration');
+    }
+
+    const connection = await mysql.createConnection(process.env.DATABASE_URL);
+
+    // Set session variables for security
+    await connection.execute('SET SESSION sql_mode = "STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO"');
+
+    return connection;
+  } catch (error) {
+    console.error('Database connection error:', error);
+    throw new Error('Failed to establish database connection');
+  }
 }
 
-export function releaseConnection(connection: any) {
-  if (connection && connection.end) {
-    connection.end();
+export async function releaseConnection(connection: any) {
+  if (connection && typeof connection.end === 'function') {
+    try {
+      await connection.end();
+    } catch (error) {
+      console.error('Error closing database connection:', error);
+    }
   }
 }
 
 export async function initDatabase() {
   const connection = await getConnection();
-  
+
   try {
     // Users table
     await connection.execute(`
@@ -151,6 +170,61 @@ export async function initDatabase() {
         quote TEXT,
         generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id)
+      )
+    `);
+
+    // AI Study Plans
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS ai_study_plans (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT DEFAULT 1,
+        subjects JSON,
+        timeline_days INT,
+        monthly_goals JSON,
+        questions_per_day INT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      )
+    `);
+
+    // AI Study Tasks
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS ai_study_tasks (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT DEFAULT 1,
+        plan_id INT,
+        subject VARCHAR(200),
+        task_type ENUM('lecture', 'practice', 'revision', 'test', 'current_affairs'),
+        task_description TEXT,
+        target_date DATE,
+        estimated_hours DECIMAL(3,1),
+        questions_count INT DEFAULT 0,
+        status ENUM('pending', 'in_progress', 'completed', 'overdue') DEFAULT 'pending',
+        completed_at TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (plan_id) REFERENCES ai_study_plans(id)
+      )
+    `);
+
+    // AI Progress Tracking
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS ai_progress_tracking (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT DEFAULT 1,
+        plan_id INT,
+        subject VARCHAR(200),
+        original_target_days INT,
+        current_target_days INT,
+        actual_days_taken INT DEFAULT 0,
+        completion_percentage DECIMAL(5,2) DEFAULT 0,
+        performance_score DECIMAL(3,1) DEFAULT 0,
+        weak_areas JSON,
+        strong_areas JSON,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (plan_id) REFERENCES ai_study_plans(id)
       )
     `);
 
