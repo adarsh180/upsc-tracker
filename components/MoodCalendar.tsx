@@ -9,30 +9,40 @@ import { cn } from '@/lib/utils';
 type MoodEntry = {
   id: number;
   date: string;
-  mood: 'happy' | 'sad' | 'stressed' | 'neutral' | 'productive' | 'tired' | 'energetic';
+  mood: 'happy' | 'excited' | 'motivated' | 'confident' | 'neutral' | 'tired' | 'stressed' | 'frustrated' | 'sad' | 'anxious' | 'overwhelmed' | 'bored';
   note?: string;
   created_at: string;
   updated_at: string;
 };
 
 const moodColors = {
-  happy: 'bg-yellow-400',
-  sad: 'bg-blue-400',
-  stressed: 'bg-red-400',
-  neutral: 'bg-gray-400',
-  productive: 'bg-green-400',
-  tired: 'bg-purple-400',
-  energetic: 'bg-orange-400'
+  happy: 'bg-green-500',
+  excited: 'bg-orange-500',
+  motivated: 'bg-blue-500',
+  confident: 'bg-purple-500',
+  neutral: 'bg-yellow-500',
+  tired: 'bg-gray-500',
+  stressed: 'bg-red-500',
+  frustrated: 'bg-red-600',
+  sad: 'bg-blue-600',
+  anxious: 'bg-yellow-600',
+  overwhelmed: 'bg-red-700',
+  bored: 'bg-gray-600'
 };
 
 const moodEmojis = {
   happy: '😊',
-  sad: '😢',
-  stressed: '😰',
+  excited: '🤩',
+  motivated: '💪',
+  confident: '😎',
   neutral: '😐',
-  productive: '💪',
   tired: '😴',
-  energetic: '⚡'
+  stressed: '😰',
+  frustrated: '😤',
+  sad: '😢',
+  anxious: '😟',
+  overwhelmed: '🤯',
+  bored: '😑'
 };
 
 export default function MoodCalendar() {
@@ -208,21 +218,11 @@ export default function MoodCalendar() {
   }
 
   const getMoodColor = (mood: string) => {
-    switch (mood) {
-      case 'sad': return 'bg-red-500';
-      case 'neutral': return 'bg-yellow-500';
-      case 'happy': return 'bg-green-500';
-      default: return 'bg-gray-700';
-    }
+    return moodColors[mood as keyof typeof moodColors] || 'bg-gray-700';
   };
 
   const getMoodEmoji = (mood: string) => {
-    switch (mood) {
-      case 'sad': return '😢';
-      case 'neutral': return '😐';
-      case 'happy': return '😊';
-      default: return '📅';
-    }
+    return moodEmojis[mood as keyof typeof moodEmojis] || '📅';
   };
 
   const now = new Date();

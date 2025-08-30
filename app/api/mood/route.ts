@@ -27,7 +27,7 @@ export async function GET() {
     
     await connection.end();
     
-    return NextResponse.json(Array.isArray(rows) ? rows : []);
+    return NextResponse.json({ data: Array.isArray(rows) ? rows : [] });
   } catch (error) {
     console.error('Database error:', error);
     return NextResponse.json([], { status: 200 });
