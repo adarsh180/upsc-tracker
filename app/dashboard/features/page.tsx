@@ -11,7 +11,7 @@ import Flashcards from '@/components/Flashcards';
 import QuestionBank from '@/components/QuestionBank';
 import CurrentAffairs from '@/components/CurrentAffairs';
 import AdvancedAnalytics from '@/components/AdvancedAnalytics';
-import SmartNotifications from '@/components/SmartNotifications';
+
 import SmartQuestionGenerator from '@/components/SmartQuestionGenerator';
 import EssayEvaluator from '@/components/EssayEvaluator';
 
@@ -146,15 +146,6 @@ export default function FeaturesPage() {
           <AdvancedAnalytics />
         </motion.div>
 
-        {/* Smart Notifications */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 2.0 }}
-        >
-          <SmartNotifications />
-        </motion.div>
-
         {/* Smart Question Generator */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -204,14 +195,8 @@ export default function FeaturesPage() {
               <h4 className="font-semibold text-green-400 mb-2">✅ Advanced Analytics</h4>
               <p className="text-neutral-300">Comprehensive performance insights with charts - Available Now!</p>
             </div>
-            <div className="bg-green-500/10 border border-green-400/20 rounded-lg p-4">
-              <h4 className="font-semibold text-green-400 mb-2">✅ Smart Notifications</h4>
-              <p className="text-neutral-300">Personalized study reminders and alerts - Available Now!</p>
-            </div>
-            <div className="bg-green-500/10 border border-green-400/20 rounded-lg p-4">
-              <h4 className="font-semibold text-green-400 mb-2">✅ Mobile PWA</h4>
-              <p className="text-neutral-300">Progressive Web App with offline support - Available Now!</p>
-            </div>
+
+
             <div className="bg-green-500/10 border border-green-400/20 rounded-lg p-4">
               <h4 className="font-semibold text-green-400 mb-2">✅ Smart Question Generator</h4>
               <p className="text-neutral-300">AI-powered UPSC questions from any text or PDF - Available Now!</p>
