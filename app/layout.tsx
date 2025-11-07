@@ -1,16 +1,5 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
-import dynamic from 'next/dynamic';
-
-
-
-const inter = Inter({ 
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-inter',
-  weight: ['300', '400', '500', '600', '700', '800', '900']
-});
 
 export const metadata: Metadata = {
   title: 'UPSC CSE Tracker | Elite Preparation Dashboard',
@@ -42,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en">
       <body className="font-body antialiased min-h-screen overflow-x-hidden">
         <main className="relative min-h-screen">
           {children}

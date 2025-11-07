@@ -195,8 +195,8 @@ export default function QuestionBank() {
               <span className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-xs">
                 {currentQuestion.exam_type.toUpperCase()}
               </span>
-              <span className={`px-3 py-1 rounded-full text-xs ${getDifficultyColor(currentQuestion.difficulty)}`}>
-                {currentQuestion.difficulty.toUpperCase()}
+              <span className={`px-3 py-1 rounded-full text-xs ${getDifficultyColor(currentQuestion.difficulty || 'medium')}`}>
+                {(currentQuestion.difficulty || 'medium').toUpperCase()}
               </span>
               <span className="px-3 py-1 bg-gray-500/20 text-gray-400 rounded-full text-xs">
                 {currentQuestion.year}
