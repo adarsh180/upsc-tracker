@@ -25,12 +25,21 @@ export default function AdvancedAnalytics() {
   }, [timeRange]);
 
   const fetchAnalytics = async () => {
+    setLoading(true);
     try {
       const response = await fetch(`/api/analytics?days=${timeRange}`);
       const data = await response.json();
       setAnalytics(data.data);
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
+      setAnalytics({
+        studyHours: [],
+        subjectProgress: [],
+        weeklyPerformance: [],
+        moodCorrelation: [],
+        timeDistribution: [],
+        streakData: []
+      });
     } finally {
       setLoading(false);
     }

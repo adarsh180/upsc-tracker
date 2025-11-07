@@ -142,6 +142,20 @@ export async function PUT(request: NextRequest) {
       );
     }
     
+    // Track analytics for subject progress
+    try {
+      await fetch('/api/analytics/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'subject_progress',
+          data: { subject: field, progress_change: value }
+        })
+      });
+    } catch (e) {
+      // Analytics tracking is optional
+    }
+    
     releaseConnection(connection);
     return NextResponse.json({ success: true });
   } catch (error) {

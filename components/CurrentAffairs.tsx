@@ -121,8 +121,13 @@ function CurrentAffairs() {
     return true;
   }), [articles, selectedCategory, selectedImportance, selectedSource, showBookmarked]);
 
-  const categories = useMemo(() => Array.from(new Set(articles.map(a => a.category))), [articles]);
+  const categories = useMemo(() => {
+    if (!articles || !Array.isArray(articles)) return [];
+    return Array.from(new Set(articles.map(a => a.category).filter(Boolean)));
+  }, [articles]);
+  
   const todayArticles = useMemo(() => {
+    if (!articles || !Array.isArray(articles)) return [];
     const today = new Date().toISOString().split('T')[0];
     return articles.filter(a => a.date === today);
   }, [articles]);
@@ -148,7 +153,7 @@ function CurrentAffairs() {
         <GlassCard className="text-center bg-gradient-to-br from-red-500/10 to-red-600/5 border-red-400/20">
           <Star className="w-6 h-6 text-red-400 mx-auto mb-2" />
           <div className="text-2xl font-bold text-red-400">
-            {articles.filter(a => a.importance === 'critical').length}
+{(articles || []).filter(a => a && a.importance === 'critical').length}
           </div>
           <div className="text-xs text-neutral-400">Critical News</div>
         </GlassCard>
@@ -156,7 +161,7 @@ function CurrentAffairs() {
         <GlassCard className="text-center bg-gradient-to-br from-yellow-500/10 to-yellow-600/5 border-yellow-400/20">
           <Bookmark className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
           <div className="text-2xl font-bold text-yellow-400">
-            {articles.filter(a => a.is_bookmarked).length}
+{(articles || []).filter(a => a && a.is_bookmarked).length}
           </div>
           <div className="text-xs text-neutral-400">Bookmarked</div>
         </GlassCard>
@@ -164,7 +169,7 @@ function CurrentAffairs() {
         <GlassCard className="text-center bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-400/20">
           <Calendar className="w-6 h-6 text-green-400 mx-auto mb-2" />
           <div className="text-2xl font-bold text-green-400">
-            {Math.round(articles.reduce((sum, a) => sum + a.upsc_relevance, 0) / articles.length) || 0}%
+{Math.round((articles || []).reduce((sum, a) => sum + (a?.upsc_relevance || 0), 0) / Math.max((articles || []).length, 1)) || 0}%
           </div>
           <div className="text-xs text-neutral-400">Avg UPSC Relevance</div>
         </GlassCard>
@@ -244,7 +249,7 @@ function CurrentAffairs() {
 
         {/* Articles Grid */}
         <div className="space-y-4">
-          {filteredArticles.slice(0, 10).map((article, index) => (
+          {(filteredArticles || []).slice(0, 10).map((article, index) => (
             <motion.div
               key={article.id}
               initial={{ opacity: 0, y: 20 }}
@@ -333,7 +338,7 @@ function CurrentAffairs() {
           ))}
         </div>
 
-        {filteredArticles.length === 0 && (
+        {(!filteredArticles || filteredArticles.length === 0) && (
           <div className="text-center py-12 text-neutral-400">
             <Newspaper className="w-16 h-16 mx-auto mb-4 opacity-50" />
             <p className="text-lg mb-2">No articles found</p>
