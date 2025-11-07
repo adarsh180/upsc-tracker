@@ -177,7 +177,7 @@ export default function Flashcards() {
                   >
                     <div className="flex justify-between items-start mb-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${getDifficultyColor(currentCard?.difficulty || 'medium')}`}>
-                        {currentCard?.difficulty?.toUpperCase()}
+                        {(currentCard?.difficulty || 'medium').toUpperCase()}
                       </span>
                       <span className="text-xs text-purple-400 bg-purple-500/20 px-2 py-1 rounded-full">
                         {currentCard?.subject}

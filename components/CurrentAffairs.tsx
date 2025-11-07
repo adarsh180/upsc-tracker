@@ -262,8 +262,8 @@ function CurrentAffairs() {
                     <span className={`px-2 py-1 rounded-full text-xs ${getSourceColor(article.source)}`}>
                       {article.source}
                     </span>
-                    <span className={`px-2 py-1 rounded-full text-xs border ${getImportanceColor(article.importance)}`}>
-                      {article.importance.toUpperCase()}
+                    <span className={`px-2 py-1 rounded-full text-xs border ${getImportanceColor(article.importance || 'medium')}`}>
+                      {(article.importance || 'medium').toUpperCase()}
                     </span>
                     <span className="px-2 py-1 bg-gray-500/20 text-gray-400 rounded-full text-xs">
                       {article.category}
