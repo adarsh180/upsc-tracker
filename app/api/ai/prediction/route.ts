@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getConnection, releaseConnection } from '@/lib/db';
+import { UPSC_DATA, calculateRealisticScore, calculateRealisticRank, getTimelineExpectation, getPSIRBenchmark } from '@/lib/upscData';
+import { generateAdvancedPrediction, UPSCPredictionEngine } from '@/lib/advancedPredictionEngine';
+import { PerformanceMetricsTracker } from '@/lib/realTimeUpdater';
+import { UPSCHistoryTracker, StrengthWeaknessAnalyzer } from '@/lib/historyTracker';
+import { PersonalizedSuggestionsEngine } from '@/lib/personalizedSuggestions';
 
 export async function GET() {
   try {
@@ -25,8 +30,41 @@ export async function GET() {
     const psirData = Array.isArray(psirProgress) ? psirProgress : [];
     const essayData = Array.isArray(essayProgress) ? essayProgress : [];
     
+    // Use advanced prediction engine with real-time analytics
+    const userProgress = {
+      user_id: 1,
+      completion: calculateOverallCompletion(subjects),
+      accuracy: calculateAccuracy(attempts),
+      testPerformance: calculateTestPerformance(tests),
+      category: 'general'
+    };
+    
+    const historicalData = combineHistoricalData(attempts, sessions, tests, moods, goals);
+    const advancedPrediction = generateAdvancedPrediction(userProgress, historicalData);
+    const realTimeMetrics = PerformanceMetricsTracker.calculateRealTimeMetrics(historicalData);
+    
+    // Get comprehensive history and analysis
+    const historyTracker = UPSCHistoryTracker.getInstance();
+    const completeHistory = await historyTracker.getCompleteHistory('1');
+    const performanceAnalysis = await StrengthWeaknessAnalyzer.analyzePerformance('1');
+    
+    // Calculate time to exam for personalized suggestions
+    const examDate = new Date('2026-05-24');
+    const timeToExam = Math.ceil((examDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    const personalizedSuggestions = PersonalizedSuggestionsEngine.generateDailySuggestions(
+      performanceAnalysis, completeHistory, timeToExam
+    );
+    
+    // Combine with existing analytics for backward compatibility
     const analytics = calculateAdvancedAnalytics(subjects, attempts, sessions, tests, moods, goals, psirData, essayData);
-    const prediction = generateUltraRigorousPrediction(analytics);
+    const prediction = enhanceWithAdvancedPrediction(
+      generateUltraRigorousPrediction(analytics), 
+      advancedPrediction, 
+      realTimeMetrics,
+      completeHistory,
+      performanceAnalysis,
+      personalizedSuggestions
+    );
     
     return NextResponse.json(prediction);
     
@@ -205,7 +243,7 @@ function generateUltraRigorousPrediction(analytics: any): any {
   return {
     examReadiness: Math.round(examReadiness),
     prelimsScore: Math.round(prelimsScore),
-    prelimsCutoff: 98,
+    prelimsCutoff: (UPSC_DATA.cutoffs as any)[2025]?.prelims || 95,
     mainsScore: Math.round(mainsScore),
     interviewScore: Math.round(interviewScore),
     finalScore: Math.round(finalScore),
@@ -439,25 +477,19 @@ function calculatePSIRAnalysis(psirData: any[], tests: any[], accuracy: number):
   const psirTests = tests.filter(t => t.subject?.toLowerCase().includes('psir') || t.subject?.toLowerCase().includes('political'));
   const avgTestScore = psirTests.length > 0 ? psirTests.reduce((sum, t) => sum + (t.scored_marks / t.total_marks * 100), 0) / psirTests.length : 60;
   
-  // Ultra-rigorous scoring for UPSC PSIR (500 marks total)
-  const qualityFactor = Math.min(lectureCompletion / 100, 1.2); // Lectures boost quality
-  const practiceBonus = Math.min(testCompletion / 100 * 20, 30); // Test practice bonus
-  const balancePenalty = Math.abs(paper1Completion - paper2Completion) > 30 ? 20 : 0; // Penalty for imbalance
+  // Authentic UPSC PSIR scoring using real data patterns
+  const psirBenchmark = getPSIRBenchmark();
+  const qualityFactor = Math.min(lectureCompletion / 100, 1.2);
+  const practiceBonus = Math.min(testCompletion / 100 * 20, 30);
+  const balancePenalty = Math.abs(paper1Completion - paper2Completion) > 30 ? 20 : 0;
   
-  const baseScore = (overallCompletion * 4) + (accuracy * 0.8) + (avgTestScore * 0.6) + practiceBonus - balancePenalty;
-  const predictedScore = Math.max(150, Math.min(500, baseScore * qualityFactor));
+  // Use authentic UPSC scoring patterns (180-280 average, 350-450 toppers)
+  const performanceScore = (overallCompletion * 0.4) + (avgTestScore * 0.6);
+  const predictedScore = calculateRealisticScore(performanceScore, avgTestScore, 'optional');
   
-  // Ultra-harsh UPSC PSIR ranking (most candidates score 200-350)
-  const percentageScore = (predictedScore / 500) * 100;
-  let rank = 80000;
-  if (percentageScore >= 90) rank = Math.floor(Math.random() * 200) + 1; // Top 200
-  else if (percentageScore >= 85) rank = Math.floor(Math.random() * 800) + 200; // 200-1000
-  else if (percentageScore >= 80) rank = Math.floor(Math.random() * 2000) + 1000; // 1000-3000
-  else if (percentageScore >= 75) rank = Math.floor(Math.random() * 5000) + 3000; // 3000-8000
-  else if (percentageScore >= 70) rank = Math.floor(Math.random() * 12000) + 8000; // 8000-20000
-  else if (percentageScore >= 65) rank = Math.floor(Math.random() * 30000) + 20000; // 20000-50000
-  
-  const percentile = ((1000000 - rank) / 1000000) * 100;
+  // Realistic ranking based on actual UPSC competition (8.9% success rate for PSIR)
+  const rank = calculateRealisticRank(predictedScore * 4, 'general'); // Convert to total score scale
+  const percentile = ((UPSC_DATA.competition.totalRegistrations - rank) / UPSC_DATA.competition.totalRegistrations) * 100;
   
   // Identify strengths and weaknesses based on actual performance
   const sectionScores = [
@@ -522,17 +554,12 @@ function calculateEssayAnalysis(essayData: any[], tests: any[], accuracy: number
   
   const avgWritingSkill = Object.values(writingSkill).reduce((sum: number, score: number) => sum + score, 0) / 4;
   
-  const baseScore = (overallCompletion * 1.5) + (avgWritingSkill * 0.8) + (avgTestScore * 0.7);
-  const predictedScore = Math.max(80, Math.min(250, baseScore));
+  // Authentic UPSC Essay scoring (80-130 average, 150-180 toppers)
+  const performanceScore = (overallCompletion * 0.4) + (avgWritingSkill * 0.6);
+  const predictedScore = calculateRealisticScore(performanceScore, avgTestScore, 'essay');
   
-  const percentageScore = (predictedScore / 250) * 100;
-  let rank = 40000;
-  if (percentageScore >= 80) rank = Math.random() * 1000 + 1;
-  else if (percentageScore >= 70) rank = Math.random() * 5000 + 1000;
-  else if (percentageScore >= 60) rank = Math.random() * 15000 + 5000;
-  else if (percentageScore >= 50) rank = Math.random() * 25000 + 15000;
-  
-  const percentile = ((1000000 - rank) / 1000000) * 100;
+  const rank = calculateRealisticRank(predictedScore * 8, 'general'); // Convert to total score scale
+  const percentile = ((UPSC_DATA.competition.totalRegistrations - rank) / UPSC_DATA.competition.totalRegistrations) * 100;
   
   return {
     completion: Math.round(overallCompletion),
@@ -545,6 +572,128 @@ function calculateEssayAnalysis(essayData: any[], tests: any[], accuracy: number
     testPerformance: Math.round(avgTestScore),
     strengths: avgWritingSkill > 75 ? ['Writing Structure', 'Content Quality'] : ['Basic Understanding'],
     weaknesses: avgWritingSkill < 60 ? ['Writing Speed', 'Essay Structure', 'Content Depth'] : essayCompletion < 50 ? ['Practice Essays'] : ['Advanced Techniques']
+  };
+}
+
+function combineHistoricalData(attempts: any[], sessions: any[], tests: any[], moods: any[], goals: any[]): any[] {
+  const combined: any[] = [];
+  
+  // Add attempts data
+  attempts.forEach(a => combined.push({
+    timestamp: a.attempted_at,
+    type: 'attempt',
+    performance: a.is_correct ? 100 : 0,
+    accuracy: a.is_correct ? 100 : 0,
+    time_taken: a.time_taken
+  }));
+  
+  // Add session data
+  sessions.forEach(s => combined.push({
+    timestamp: s.created_at,
+    type: 'session',
+    duration_minutes: s.duration_minutes,
+    performance: Math.min(100, (s.duration_minutes / 60) * 10) // Performance based on study hours
+  }));
+  
+  // Add test data
+  tests.forEach(t => combined.push({
+    timestamp: t.attempt_date,
+    type: 'test',
+    performance: (t.scored_marks / t.total_marks) * 100,
+    accuracy: (t.scored_marks / t.total_marks) * 100
+  }));
+  
+  // Add mood data
+  moods.forEach(m => combined.push({
+    timestamp: m.date,
+    type: 'mood',
+    mood: m.mood,
+    performance: getMoodScore(m.mood)
+  }));
+  
+  return combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+}
+
+function getMoodScore(mood: string): number {
+  const moodScores: { [key: string]: number } = {
+    'excellent': 100, 'good': 80, 'okay': 60, 'bad': 40, 'terrible': 20
+  };
+  return moodScores[mood.toLowerCase()] || 60;
+}
+
+function calculateOverallCompletion(subjects: any[]): number {
+  if (subjects.length === 0) return 0;
+  return subjects.reduce((sum, s) => {
+    const lectureComp = s.total_lectures > 0 ? (s.completed_lectures / s.total_lectures) * 100 : 0;
+    const dppComp = s.total_dpps > 0 ? (s.completed_dpps / s.total_dpps) * 100 : 0;
+    return sum + ((lectureComp + dppComp) / 2);
+  }, 0) / subjects.length;
+}
+
+function calculateAccuracy(attempts: any[]): number {
+  if (attempts.length === 0) return 0;
+  const correct = attempts.filter(a => a.is_correct).length;
+  return (correct / attempts.length) * 100;
+}
+
+function calculateTestPerformance(tests: any[]): number {
+  if (tests.length === 0) return 0;
+  return tests.reduce((sum, t) => sum + (t.scored_marks / t.total_marks * 100), 0) / tests.length;
+}
+
+function enhanceWithAdvancedPrediction(basePrediction: any, advancedPrediction: any, realTimeMetrics: any, history?: any, analysis?: any, suggestions?: any): any {
+  return {
+    ...basePrediction,
+    // Enhanced with advanced analytics
+    advancedAnalytics: {
+      totalScore: advancedPrediction.totalScore,
+      subjectPredictions: advancedPrediction.subjectPredictions,
+      rankPrediction: advancedPrediction.rankPrediction,
+      confidenceLevel: advancedPrediction.confidenceLevel,
+      dataQuality: advancedPrediction.dataQuality,
+      lastUpdated: advancedPrediction.lastUpdated
+    },
+    realTimeMetrics: {
+      studyConsistency: Math.round(realTimeMetrics.studyConsistency * 100),
+      accuracyTrend: Math.round(realTimeMetrics.accuracyTrend * 100),
+      speedImprovement: Math.round(realTimeMetrics.speedImprovement * 100),
+      retentionRate: Math.round(realTimeMetrics.retentionRate * 100),
+      burnoutRisk: Math.round(realTimeMetrics.burnoutRisk * 100),
+      peakPerformanceHours: realTimeMetrics.peakPerformanceHours
+    },
+    // Adaptive factors from advanced engine
+    adaptiveFactors: advancedPrediction.adaptiveFactors,
+    // Complete preparation journey
+    preparationJourney: history ? {
+      totalDays: history.preparationDays,
+      totalStudyHours: history.effortMetrics?.totalStudyHours || 0,
+      totalActivities: history.totalActivities,
+      consistencyScore: history.effortMetrics?.consistencyScore || 0
+    } : null,
+    
+    // Comprehensive analysis
+    comprehensiveAnalysis: analysis ? {
+      strengths: analysis.strengths || [],
+      weaknesses: analysis.weaknesses || [],
+      subjectAnalysis: analysis.subjectWiseAnalysis || [],
+      topicAnalysis: analysis.topicWiseAnalysis || [],
+      timePatterns: analysis.timePatterns || null,
+      testPerformance: analysis.testPerformance || null
+    } : null,
+    
+    // Personalized daily suggestions
+    dailySuggestions: suggestions ? {
+      priority: suggestions.priority || [],
+      studyPlan: suggestions.studyPlan || null,
+      weaknessTargeting: suggestions.weaknessTargeting || null,
+      strengthLeveraging: suggestions.strengthLeveraging || null,
+      motivational: suggestions.motivational || []
+    } : null,
+    
+    // Real-time update indicator
+    isRealTime: true,
+    predictionVersion: '2.0',
+    neverForgetsEffort: true
   };
 }
 
