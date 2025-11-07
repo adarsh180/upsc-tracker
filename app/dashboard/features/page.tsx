@@ -183,10 +183,7 @@ export default function FeaturesPage() {
               <h4 className="font-semibold text-green-400 mb-2">✅ Flashcards</h4>
               <p className="text-neutral-300">Interactive flashcards for quick revision - Available Now!</p>
             </div>
-            <div className="bg-white/5 rounded-lg p-4">
-              <h4 className="font-semibold text-white mb-2">📊 Advanced Analytics</h4>
-              <p className="text-neutral-400">Detailed performance insights and trends</p>
-            </div>
+
             <div className="bg-green-500/10 border border-green-400/20 rounded-lg p-4">
               <h4 className="font-semibold text-green-400 mb-2">✅ Current Affairs</h4>
               <p className="text-neutral-300">UPSC-relevant news from The Hindu & Indian Express - Available Now!</p>
