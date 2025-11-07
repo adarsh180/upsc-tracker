@@ -34,6 +34,14 @@ interface PredictionData {
     averageCandidate: number;
     yourPosition: number;
   };
+  detailedMetrics?: {
+    accuracy: number;
+    speedScore: number;
+    consistency: number;
+    moodImpact: number;
+    preparationDays: number;
+    testTrend: string;
+  };
 }
 
 export default function PerformancePrediction() {
@@ -51,48 +59,58 @@ export default function PerformancePrediction() {
       setPrediction(data);
     } catch (error) {
       console.error('Failed to fetch prediction:', error);
-      // Fallback data with UPSC-specific metrics
+      // Ultra-realistic fallback with harsh UPSC reality
       setPrediction({
-        examReadiness: 72,
-        prelimsScore: 118,
+        examReadiness: 58,
+        prelimsScore: 95,
         prelimsCutoff: 98,
-        mainsScore: 850,
-        interviewScore: 180,
-        finalScore: 1030,
-        predictedRank: 450,
-        categoryRank: 120,
-        qualificationProbability: 78,
+        mainsScore: 745,
+        interviewScore: 172,
+        finalScore: 912,
+        predictedRank: 18500,
+        categoryRank: 6475,
+        qualificationProbability: 42,
         subjectWiseAnalysis: {
-          gs1: { score: 95, rank: 2500, percentile: 85 },
-          gs2: { score: 88, rank: 3200, percentile: 78 },
-          gs3: { score: 102, rank: 1800, percentile: 92 },
-          gs4: { score: 85, rank: 3800, percentile: 72 },
-          csat: { score: 68, qualifying: true },
-          optional: { score: 145, rank: 1200, percentile: 88 },
-          essay: { score: 125, rank: 2100, percentile: 82 }
+          gs1: { score: 82, rank: 12000, percentile: 72 },
+          gs2: { score: 78, rank: 15000, percentile: 68 },
+          gs3: { score: 88, rank: 8500, percentile: 78 },
+          gs4: { score: 72, rank: 18000, percentile: 62 },
+          csat: { score: 95, qualifying: true },
+          optional: { score: 128, rank: 9500, percentile: 75 },
+          essay: { score: 102, rank: 14000, percentile: 65 }
         },
         strengthAreas: [
           'General Studies 3 (Science & Technology)',
-          'Optional Subject Performance',
-          'Essay Writing Structure'
+          'CSAT Performance'
         ],
         improvementAreas: [
           'General Studies 4 (Ethics)',
+          'Answer Writing Speed',
           'Current Affairs Integration',
-          'Answer Writing Speed'
+          'Overall Completion Rate'
         ],
         strategicRecommendations: [
-          'Focus 40% time on GS4 - Ethics case studies and value-based questions',
-          'Daily current affairs integration with static topics for better retention',
-          'Practice 8-10 answer writing daily with time constraints',
-          'Strengthen weak areas in Polity and Governance for GS2'
+          'CRITICAL: Complete syllabus coverage - currently insufficient for UPSC standards',
+          'Focus 50% time on GS4 - Ethics case studies and value-based questions',
+          'Daily answer writing practice with strict time limits (8 minutes per answer)',
+          'Integrate current affairs with static topics for better retention',
+          'Take weekly full-length mock tests to build exam temperament',
+          'Consider extending preparation timeline for better results'
         ],
         timeToExam: 180,
-        confidenceLevel: 'medium',
+        confidenceLevel: 'low',
         benchmarkComparison: {
-          toppers: 1200,
-          averageCandidate: 750,
-          yourPosition: 1030
+          toppers: 1100,
+          averageCandidate: 850,
+          yourPosition: 912
+        },
+        detailedMetrics: {
+          accuracy: 62,
+          speedScore: 48,
+          consistency: 55,
+          moodImpact: 65,
+          preparationDays: 150,
+          testTrend: 'stable'
         }
       });
     } finally {
@@ -218,7 +236,7 @@ export default function PerformancePrediction() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {prediction.subjectWiseAnalysis && Object.entries(prediction.subjectWiseAnalysis).map(([subject, data]) => (
             <div key={subject} className="bg-white/5 border border-white/10 rounded-xl p-4">
-              <h5 className="font-medium text-white mb-2 uppercase">{subject.replace('gs', 'GS ')}</h5>
+              <h5 className="font-medium text-white mb-2 uppercase">{subject.replace('gs', 'GS ').replace('psir', 'PSIR').replace('csat', 'CSAT').replace('optional', 'Optional').replace('essay', 'Essay')}</h5>
               {subject === 'csat' ? (
                 <div>
                   <div className="text-lg font-bold text-blue-400">{data.score}</div>
@@ -353,12 +371,48 @@ export default function PerformancePrediction() {
         </div>
       </div>
 
-      <div className="mt-6 pt-4 border-t border-white/10">
+      <div className="mt-6 pt-4 border-t border-white/10 space-y-4">
+        {/* Detailed Metrics */}
+        {prediction.detailedMetrics && (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs">
+            <div className="text-center">
+              <div className="text-lg font-bold text-green-400">{prediction.detailedMetrics.accuracy}%</div>
+              <div className="text-neutral-400">Accuracy</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-blue-400">{prediction.detailedMetrics.speedScore}%</div>
+              <div className="text-neutral-400">Speed</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-purple-400">{prediction.detailedMetrics.consistency}%</div>
+              <div className="text-neutral-400">Consistency</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-yellow-400">{prediction.detailedMetrics.moodImpact}%</div>
+              <div className="text-neutral-400">Mood Impact</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-indigo-400">{prediction.detailedMetrics.preparationDays}</div>
+              <div className="text-neutral-400">Prep Days</div>
+            </div>
+            <div className="text-center">
+              <div className={`text-lg font-bold ${
+                prediction.detailedMetrics.testTrend === 'improving' ? 'text-green-400' :
+                prediction.detailedMetrics.testTrend === 'declining' ? 'text-red-400' : 'text-yellow-400'
+              }`}>
+                {prediction.detailedMetrics.testTrend === 'improving' ? '↗️' :
+                 prediction.detailedMetrics.testTrend === 'declining' ? '↘️' : '→'}
+              </div>
+              <div className="text-neutral-400">Test Trend</div>
+            </div>
+          </div>
+        )}
+        
         <button
           onClick={fetchPrediction}
           className="w-full py-2 px-4 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-400/30 rounded-lg text-blue-400 hover:text-blue-300 transition-colors text-sm"
         >
-          Update Prediction
+          🔄 Update Ultra-Rigorous Prediction
         </button>
       </div>
     </GlassCard>
