@@ -17,12 +17,7 @@ export const metadata: Metadata = {
   description: 'Sophisticated UPSC Civil Services preparation platform with intelligent progress tracking, analytics, and personalized insights for serious aspirants.',
   keywords: 'UPSC, Civil Services, IAS, IPS, IFS, preparation, tracker, analytics, dashboard',
   authors: [{ name: 'UPSC Tracker Team' }],
-  manifest: '/manifest.json',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'black-translucent',
-    title: 'UPSC Tracker'
-  },
+
   openGraph: {
     title: 'UPSC CSE Tracker | Elite Preparation Dashboard',
     description: 'Sophisticated UPSC Civil Services preparation platform',
@@ -33,24 +28,12 @@ export const metadata: Metadata = {
     title: 'UPSC CSE Tracker',
     description: 'Elite preparation dashboard for UPSC aspirants',
   },
-  other: {
-    'mobile-web-app-capable': 'yes',
-    'apple-mobile-web-app-capable': 'yes',
-    'apple-mobile-web-app-status-bar-style': 'black-translucent',
-    'apple-mobile-web-app-title': 'UPSC Tracker',
-    'application-name': 'UPSC Tracker',
-    'msapplication-TileColor': '#0f172a',
-    'msapplication-config': '/browserconfig.xml'
-  }
+
 };
 
 export const viewport = {
   width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  themeColor: '#6366f1',
-  colorScheme: 'dark'
+  initialScale: 1
 };
 
 export default function RootLayout({
