@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection, releaseConnection } from '@/lib/db';
+import { getCachedData, setCachedData } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    // Check cache first
+    const cached = getCachedData('subjects');
+    if (cached) {
+      return NextResponse.json(cached);
+    }
+    
     const connection = await getConnection();
     
     // Ensure table exists
@@ -52,7 +59,10 @@ export async function GET() {
     );
     releaseConnection(connection);
     
-    return NextResponse.json(Array.isArray(rows) ? rows : []);
+    const data = Array.isArray(rows) ? rows : [];
+    setCachedData('subjects', data, 2 * 60 * 1000); // Cache for 2 minutes
+    
+    return NextResponse.json(data);
   } catch (error) {
     console.error('Database error:', error);
     return NextResponse.json([], { status: 200 });

@@ -1,6 +1,10 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import dynamic from 'next/dynamic';
+
+const PWAInstall = dynamic(() => import('@/components/PWAInstall'), { ssr: false });
+const OfflineIndicator = dynamic(() => import('@/components/OfflineIndicator'), { ssr: false });
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -29,6 +33,15 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'UPSC CSE Tracker',
     description: 'Elite preparation dashboard for UPSC aspirants',
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-status-bar-style': 'black-translucent',
+    'apple-mobile-web-app-title': 'UPSC Tracker',
+    'application-name': 'UPSC Tracker',
+    'msapplication-TileColor': '#0f172a',
+    'msapplication-config': '/browserconfig.xml'
   }
 };
 
@@ -51,6 +64,8 @@ export default function RootLayout({
       <body className="font-body antialiased min-h-screen overflow-x-hidden">
         <main className="relative min-h-screen">
           {children}
+          <PWAInstall />
+          <OfflineIndicator />
         </main>
       </body>
     </html>

@@ -5,15 +5,17 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { LogOut, Brain, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import GlassCard from '@/components/GlassCard';
-import AIInsights from '@/components/AIInsights';
-import CategoryCard from '@/components/CategoryCard';
-import SpecialCategoryCard from '@/components/SpecialCategoryCard';
-import MoodCalendar from '@/components/MoodCalendar';
-import ProgressTrackerCard from '@/components/ProgressTrackerCard';
-import CountdownTimer from '@/components/CountdownTimer';
-import MotivationCard from '@/components/MotivationCard';
 import { SubjectProgress } from '@/types';
+
+const AIInsights = dynamic(() => import('@/components/AIInsights'), { ssr: false });
+const CategoryCard = dynamic(() => import('@/components/CategoryCard'));
+const SpecialCategoryCard = dynamic(() => import('@/components/SpecialCategoryCard'));
+const MoodCalendar = dynamic(() => import('@/components/MoodCalendar'), { ssr: false });
+const ProgressTrackerCard = dynamic(() => import('@/components/ProgressTrackerCard'), { ssr: false });
+const CountdownTimer = dynamic(() => import('@/components/CountdownTimer'));
+const MotivationCard = dynamic(() => import('@/components/MotivationCard'));
 
 export default function Dashboard() {
   const [subjects, setSubjects] = useState<SubjectProgress[]>([]);
@@ -183,6 +185,18 @@ export default function Dashboard() {
                 hover={true}
               >
                 <span className="text-sm font-medium text-green-400 group-hover:text-green-300 transition-colors">Goals</span>
+              </GlassCard>
+            </Link>
+            <Link href="/dashboard/features">
+              <GlassCard
+                className="px-4 py-2 cursor-pointer bg-gradient-to-br from-orange-500/10 to-yellow-500/5 border-orange-400/20 hover:border-orange-400/30 group"
+                size="sm"
+                hover={true}
+              >
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-orange-400 group-hover:text-orange-300 transition-colors" />
+                  <span className="text-sm font-medium text-orange-400 group-hover:text-orange-300 transition-colors">Features</span>
+                </div>
               </GlassCard>
             </Link>
             <button onClick={handleSignOut}>

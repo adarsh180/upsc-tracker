@@ -19,7 +19,7 @@ export async function getPersonalizedInsights(progressData: any) {
           content: `Analyze UPSC progress: ${progressData.length} subjects, avg completion: ${Math.round(progressData.reduce((sum: number, s: any) => sum + ((s.completed_lectures / s.total_lectures) * 100), 0) / progressData.length)}%`
         }
       ],
-      model: "llama3-8b-8192",
+      model: "llama-3.1-8b-instant",
       temperature: 0.7,
       max_tokens: 200,
     });
@@ -44,7 +44,7 @@ export async function getSubjectAnalysis(subjectData: any) {
           content: `Subject: ${subjectData.subject}, Lectures: ${subjectData.completed_lectures}/${subjectData.total_lectures}, DPPs: ${subjectData.completed_dpps}/${subjectData.total_dpps}`
         }
       ],
-      model: "llama3-8b-8192",
+      model: "llama-3.1-8b-instant",
       temperature: 0.6,
       max_tokens: 150,
     });

@@ -1,265 +1,115 @@
-import { NextResponse } from 'next/server';
-import { getConnection, releaseConnection } from '@/lib/db';
+import { NextRequest, NextResponse } from 'next/server';
+import { getConnection } from '@/lib/db';
 
-export const dynamic = 'force-dynamic';
-
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const days = parseInt(searchParams.get('days') || '30');
+    
     const connection = await getConnection();
     
-    // Ensure tables exist
-    await connection.execute(`
-      CREATE TABLE IF NOT EXISTS daily_goals (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT DEFAULT 1,
-        date DATE,
-        subject VARCHAR(100),
-        hours_studied DECIMAL(3,1) DEFAULT 0,
-        topics_covered INT DEFAULT 0,
-        questions_solved INT DEFAULT 0,
-        notes TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
+    // Study Hours Trend
+    const [studyHours] = await connection.execute(`
+      SELECT DATE(created_at) as date, SUM(duration_minutes)/60 as hours
+      FROM study_sessions 
+      WHERE user_id = 1 AND created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+      GROUP BY DATE(created_at)
+      ORDER BY date
+    `, [days]);
+
+    // Subject Progress
+    const [subjectProgress] = await connection.execute(`
+      SELECT subject, 
+             ROUND((completed_lectures / GREATEST(total_lectures, 1)) * 100) as completion
+      FROM subject_progress 
+      WHERE user_id = 1
+      ORDER BY completion DESC
     `);
-    
-    await connection.execute(`
-      CREATE TABLE IF NOT EXISTS subject_progress (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT DEFAULT 1,
-        subject VARCHAR(100),
-        category VARCHAR(50),
-        total_lectures INT DEFAULT 0,
-        completed_lectures INT DEFAULT 0,
-        total_dpps INT DEFAULT 0,
-        completed_dpps INT DEFAULT 0,
-        questions_count INT DEFAULT 0,
-        revisions INT DEFAULT 0,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      )
-    `);
-    
-    // Add questions_count column if it doesn't exist
-    try {
-      await connection.execute(`
-        ALTER TABLE subject_progress ADD COLUMN questions_count INT DEFAULT 0
-      `);
-    } catch (e) {
-      // Column already exists
-    }
-    
-    await connection.execute(`
-      CREATE TABLE IF NOT EXISTS test_records (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT DEFAULT 1,
-        test_type ENUM('prelims', 'mains') DEFAULT 'prelims',
-        test_category ENUM('sectional', 'full-length', 'mock', 'subjective', 'topic-wise') DEFAULT 'mock',
-        subject VARCHAR(100),
-        total_marks INT DEFAULT 0,
-        scored_marks DECIMAL(5,2) DEFAULT 0,
-        attempt_date DATE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    
-    // Get data with safe fallbacks
-    const [subjects] = await connection.execute(
-      'SELECT * FROM subject_progress WHERE user_id = 1'
-    );
-    
-    // Get current affairs progress
-    const [currentAffairs] = await connection.execute(
-      'SELECT * FROM current_affairs WHERE user_id = 1 LIMIT 1'
-    );
-    
-    // Get essay progress
-    const [essayProgress] = await connection.execute(
-      'SELECT * FROM essay_progress WHERE user_id = 1 LIMIT 1'
-    );
-    
-    // Get optional progress
-    const [optionalProgress] = await connection.execute(
-      'SELECT * FROM optional_progress WHERE user_id = 1'
-    );
-    
-    const [tests] = await connection.execute(
-      'SELECT *, CASE WHEN test_type = "prelims" THEN 100 WHEN test_type = "mains" THEN 20 ELSE 20 END as questions_count FROM test_records WHERE user_id = 1 ORDER BY attempt_date DESC'
-    );
-    
-    const [goals] = await connection.execute(
-      'SELECT * FROM daily_goals WHERE user_id = 1 ORDER BY date DESC'
-    );
-    
-    // Safe array handling with proper typing
-    const subjectsArray = Array.isArray(subjects) ? subjects as any[] : [];
-    const testsArray = Array.isArray(tests) ? tests as any[] : [];
-    const goalsArray = Array.isArray(goals) ? goals as any[] : [];
-    const currentAffairsArray = Array.isArray(currentAffairs) ? currentAffairs as any[] : [];
-    const essayProgressArray = Array.isArray(essayProgress) ? essayProgress as any[] : [];
-    const optionalProgressArray = Array.isArray(optionalProgress) ? optionalProgress as any[] : [];
-    
-    // Process all subjects data
-    const allSubjectsData = [...subjectsArray];
-    
-    // Add current affairs data
-    if (currentAffairsArray.length > 0) {
-      const ca = currentAffairsArray[0];
-      allSubjectsData.push({
-        subject: 'Current Affairs',
-        category: 'CURRENT AFFAIRS',
-        completed_lectures: ca.completed_topics || 0,
-        total_lectures: ca.total_topics || 300,
-        completed_dpps: 0,
-        total_dpps: 0
-      });
-    } else {
-      allSubjectsData.push({
-        subject: 'Current Affairs',
-        category: 'CURRENT AFFAIRS',
-        completed_lectures: 0,
-        total_lectures: 300,
-        completed_dpps: 0,
-        total_dpps: 0
-      });
-    }
-    
-    // Add essay data
-    if (essayProgressArray.length > 0) {
-      const essay = essayProgressArray[0];
-      allSubjectsData.push({
-        subject: 'Essay Writing',
-        category: 'ESSAY',
-        completed_lectures: essay.lectures_completed || 0,
-        total_lectures: essay.total_lectures || 10,
-        completed_dpps: essay.essays_written || 0,
-        total_dpps: essay.total_essays || 100
-      });
-    } else {
-      allSubjectsData.push({
-        subject: 'Essay Writing',
-        category: 'ESSAY',
-        completed_lectures: 0,
-        total_lectures: 10,
-        completed_dpps: 0,
-        total_dpps: 100
-      });
-    }
-    
-    // Add optional subjects with Paper 2 logic
-    const optionalSections = ['Lectures', 'Answer Writing', 'PYQ', 'Tests'];
-    optionalSections.forEach(section => {
-      const optionalData = optionalProgressArray.find(op => op.section_name === section);
-      if (optionalData) {
-        allSubjectsData.push({
-          subject: `Optional ${section}`,
-          category: 'OPTIONAL',
-          completed_lectures: optionalData.completed_items || 0,
-          total_lectures: optionalData.total_items || 140,
-          completed_dpps: 0,
-          total_dpps: 0
-        });
-      } else {
-        allSubjectsData.push({
-          subject: `Optional ${section}`,
-          category: 'OPTIONAL',
-          completed_lectures: 0,
-          total_lectures: 140,
-          completed_dpps: 0,
-          total_dpps: 0
-        });
-      }
-    });
-    
-    // Add Optional Paper 2 (unlocks after 90 lectures completed)
-    const lecturesCompleted = optionalProgressArray.find(op => op.section_name === 'Lectures')?.completed_items || 0;
-    if (lecturesCompleted >= 90) {
-      allSubjectsData.push({
-        subject: 'Optional Paper 2',
-        category: 'OPTIONAL',
-        completed_lectures: Math.max(0, lecturesCompleted - 90),
-        total_lectures: 50,
-        completed_dpps: 0,
-        total_dpps: 0
-      });
-    }
-    
-    // Ethics is already included in subjectsArray from GS4 category, no need to add separately
-    
-    // Safe calculations
-    const totalDppQuestions = subjectsArray.reduce((sum, s) => sum + (s?.questions_count || 0), 0);
-    const prelimsTestQuestions = testsArray.filter((t: any) => t?.test_type === 'prelims').reduce((sum, t: any) => sum + (t?.questions_count || 0), 0);
-    const mainsTestQuestions = testsArray.filter((t: any) => t?.test_type === 'mains').reduce((sum, t: any) => sum + (t?.questions_count || 0), 0);
-    const totalGoalQuestions = goalsArray.reduce((sum, g) => sum + (g?.questions_solved || 0), 0);
-    
-    const prelimsQuestions = totalDppQuestions + prelimsTestQuestions + totalGoalQuestions;
-    const mainsQuestions = mainsTestQuestions;
-    
-    // Weekly trend
-    const [weeklyData] = await connection.execute(`
-      SELECT 
-        DATE(date) as day,
-        COALESCE(SUM(hours_studied), 0) as hours,
-        COALESCE(SUM(questions_solved), 0) as questions,
-        COUNT(*) as sessions
-      FROM daily_goals 
-      WHERE user_id = 1 AND date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-      GROUP BY DATE(date)
-      ORDER BY DATE(date) ASC
-    `);
-    
-    // Monthly trend
-    const [monthlyData] = await connection.execute(`
-      SELECT 
-        YEAR(date) as year,
-        MONTH(date) as month_num,
-        MONTHNAME(date) as month,
-        COALESCE(SUM(hours_studied), 0) as hours,
-        COALESCE(SUM(topics_covered), 0) as topics,
-        COALESCE(SUM(questions_solved), 0) as questions
-      FROM daily_goals 
-      WHERE user_id = 1 AND date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
-      GROUP BY YEAR(date), MONTH(date), MONTHNAME(date)
-      ORDER BY YEAR(date), MONTH(date) ASC
-    `);
-    
-    releaseConnection(connection);
-    
-    return NextResponse.json({
-      subjects: allSubjectsData,
-      tests: testsArray,
-      goals: goalsArray,
-      analytics: {
-        totalStudyHours: goalsArray.reduce((sum, g) => sum + parseFloat(g?.hours_studied || 0), 0),
-        completedTopics: subjectsArray.reduce((sum, s) => sum + (s?.completed_lectures || 0) + (s?.completed_dpps || 0), 0),
-        testsTaken: testsArray.length,
-        totalQuestions: prelimsQuestions + mainsQuestions,
-        prelimsQuestions,
-        mainsQuestions,
-        currentStreak: 0
-      },
-      trends: {
-        weekly: Array.isArray(weeklyData) ? weeklyData : [],
-        monthly: Array.isArray(monthlyData) ? monthlyData : []
-      }
-    });
+
+    // Weekly Performance
+    const [weeklyPerformance] = await connection.execute(`
+      SELECT WEEK(attempted_at) as week_num,
+             CONCAT('Week ', WEEK(attempted_at)) as week,
+             COUNT(*) as tests,
+             ROUND(AVG(CASE WHEN is_correct THEN 100 ELSE 0 END)) as accuracy
+      FROM question_attempts qa
+      WHERE qa.user_id = 1 AND qa.attempted_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+      GROUP BY WEEK(attempted_at)
+      ORDER BY week_num
+    `, [days]);
+
+    // Mood Correlation
+    const [moodCorrelation] = await connection.execute(`
+      SELECT me.mood,
+             COUNT(*) as count,
+             COALESCE(AVG(sa.productivity_score), 75) as productivity
+      FROM mood_entries me
+      LEFT JOIN study_analytics sa ON DATE(me.date) = DATE(sa.date) AND me.user_id = sa.user_id
+      WHERE me.user_id = 1 AND me.date >= DATE_SUB(NOW(), INTERVAL ? DAY)
+      GROUP BY me.mood
+      ORDER BY productivity DESC
+    `, [days]);
+
+    // Time Distribution
+    const [timeDistribution] = await connection.execute(`
+      SELECT HOUR(start_time) as hour, COUNT(*) as sessions
+      FROM study_sessions
+      WHERE user_id = 1 AND start_time >= DATE_SUB(NOW(), INTERVAL ? DAY)
+      GROUP BY HOUR(start_time)
+      ORDER BY hour
+    `, [days]);
+
+    // Streak Data
+    const [streakData] = await connection.execute(`
+      SELECT date, 
+             CASE WHEN COUNT(*) > 0 THEN true ELSE false END as active
+      FROM (
+        SELECT DATE(created_at) as date FROM study_sessions WHERE user_id = 1
+        UNION
+        SELECT DATE(attempted_at) as date FROM question_attempts WHERE user_id = 1
+        UNION  
+        SELECT date FROM daily_goals WHERE user_id = 1
+      ) activity
+      WHERE date >= DATE_SUB(NOW(), INTERVAL ? DAY)
+      GROUP BY date
+      ORDER BY date
+    `, [days]);
+
+    await connection.end();
+
+    const data = {
+      studyHours: Array.isArray(studyHours) ? studyHours.map((row: any) => ({
+        date: new Date(row.date).toLocaleDateString(),
+        hours: Math.round(row.hours * 10) / 10
+      })) : [],
+      
+      subjectProgress: Array.isArray(subjectProgress) ? subjectProgress.map((row: any, index: number) => ({
+        subject: row.subject,
+        completion: row.completion,
+        color: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'][index % 6]
+      })) : [],
+      
+      weeklyPerformance: Array.isArray(weeklyPerformance) ? weeklyPerformance : [],
+      
+      moodCorrelation: Array.isArray(moodCorrelation) ? moodCorrelation : [],
+      
+      timeDistribution: Array.isArray(timeDistribution) ? timeDistribution : [],
+      
+      streakData: Array.isArray(streakData) ? streakData : []
+    };
+
+    return NextResponse.json({ data });
   } catch (error) {
-    console.error('Analytics error:', error);
-    return NextResponse.json({
-      subjects: [],
-      tests: [],
-      goals: [],
-      analytics: {
-        totalStudyHours: 0,
-        completedTopics: 0,
-        testsTaken: 0,
-        totalQuestions: 0,
-        prelimsQuestions: 0,
-        mainsQuestions: 0,
-        currentStreak: 0
-      },
-      trends: {
-        weekly: [],
-        monthly: []
+    console.error('Failed to fetch analytics:', error);
+    return NextResponse.json({ 
+      data: {
+        studyHours: [],
+        subjectProgress: [],
+        weeklyPerformance: [],
+        moodCorrelation: [],
+        timeDistribution: [],
+        streakData: []
       }
-    }, { status: 200 });
+    });
   }
 }

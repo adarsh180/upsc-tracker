@@ -10,6 +10,7 @@ import PerformancePrediction from '@/components/PerformancePrediction';
 import SmartQuestionGenerator from '@/components/SmartQuestionGenerator';
 import SmartWidget from '@/components/SmartWidget';
 import ComprehensiveAnalytics from '@/components/ComprehensiveAnalytics';
+import SmartFeatures from '@/components/SmartFeatures';
 
 interface RealTimeData {
     subjects: any[];
@@ -231,6 +232,15 @@ export default function AIPage() {
                     transition={{ delay: 1.6 }}
                 >
                     <ComprehensiveAnalytics />
+                </motion.div>
+
+                {/* Smart Features */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 1.8 }}
+                >
+                    <SmartFeatures />
                 </motion.div>
             </div>
             {/* Data Insights Summary */}
