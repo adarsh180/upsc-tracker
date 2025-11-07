@@ -284,7 +284,7 @@ function CurrentAffairs() {
                     {article.content}
                   </p>
                   
-                  {article.tags.length > 0 && (
+                  {article.tags && Array.isArray(article.tags) && article.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-3">
                       {article.tags.slice(0, 5).map((tag, tagIndex) => (
                         <span
