@@ -275,16 +275,17 @@ export default function Dashboard() {
         })}
       </div>
 
-      {/* AI Assistant Section Card */}
+      {/* Feature Cards Grid */}
       <motion.div
-        className="mb-12"
+        className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
       >
+        {/* AI Assistant Section Card */}
         <Link href="/dashboard/ai">
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <GlassCard className="cursor-pointer bg-gradient-to-br from-purple-500/10 via-indigo-500/5 to-blue-500/10 border-purple-400/20 hover:border-purple-400/30 group">
+            <GlassCard className="cursor-pointer bg-gradient-to-br from-purple-500/10 via-indigo-500/5 to-blue-500/10 border-purple-400/20 hover:border-purple-400/30 group h-full">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
                   <motion.div
@@ -295,7 +296,7 @@ export default function Dashboard() {
                   </motion.div>
                   <div>
                     <h3 className="text-2xl font-bold gradient-text-primary">AI Study Assistant</h3>
-                    <p className="text-sm text-neutral-400">Intelligent recommendations • Performance prediction • Smart questions</p>
+                    <p className="text-sm text-neutral-400">Intelligent recommendations • Performance prediction</p>
                   </div>
                 </div>
                 <motion.div
@@ -323,12 +324,61 @@ export default function Dashboard() {
 
               <div className="text-center py-4 border-t border-white/10">
                 <p className="text-neutral-300 text-sm leading-relaxed">
-                  Experience AI-powered study recommendations, performance predictions, and intelligent question generation
+                  Experience AI-powered study recommendations and performance predictions
                 </p>
               </div>
             </GlassCard>
           </motion.div>
         </Link>
+
+        {/* Study Partner Progress Card */}
+        <a href="https://work-tracker-misti.vercel.app/" target="_blank" rel="noopener noreferrer">
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <GlassCard className="cursor-pointer bg-gradient-to-br from-pink-500/10 via-rose-500/5 to-red-500/10 border-pink-400/20 hover:border-pink-400/30 group h-full">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <motion.div
+                    className="p-3 rounded-2xl bg-gradient-to-br from-pink-500/20 to-rose-500/20 border border-pink-400/20"
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                  >
+                    <div className="w-8 h-8 text-pink-400 flex items-center justify-center font-bold text-lg">💕</div>
+                  </motion.div>
+                  <div>
+                    <h3 className="text-2xl font-bold gradient-text-primary">Study Partner Progress</h3>
+                    <p className="text-sm text-neutral-400">Track your partner's journey • Mutual motivation</p>
+                  </div>
+                </div>
+                <motion.div
+                  className="text-pink-400 group-hover:text-pink-300 group-hover:translate-x-1 transition-all duration-300"
+                  whileHover={{ scale: 1.1 }}
+                >
+                  <div className="w-6 h-6 flex items-center justify-center">→</div>
+                </motion.div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="text-center p-4 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-all duration-300">
+                  <div className="w-6 h-6 text-pink-400 mx-auto mb-2 flex items-center justify-center font-bold">📚</div>
+                  <div className="text-xs text-neutral-400 font-medium">Study Updates</div>
+                </div>
+                <div className="text-center p-4 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-all duration-300">
+                  <div className="w-6 h-6 text-rose-400 mx-auto mb-2 flex items-center justify-center font-bold">📈</div>
+                  <div className="text-xs text-neutral-400 font-medium">Progress Track</div>
+                </div>
+                <div className="text-center p-4 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-all duration-300">
+                  <div className="w-6 h-6 text-red-400 mx-auto mb-2 flex items-center justify-center font-bold">🎯</div>
+                  <div className="text-xs text-neutral-400 font-medium">Goals</div>
+                </div>
+              </div>
+
+              <div className="text-center py-4 border-t border-white/10">
+                <p className="text-neutral-300 text-sm leading-relaxed">
+                  Stay connected with your study partner's progress and achievements
+                </p>
+              </div>
+            </GlassCard>
+          </motion.div>
+        </a>
       </motion.div>
 
       {/* Basic AI Insights */}
