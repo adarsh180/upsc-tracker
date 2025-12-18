@@ -14,7 +14,7 @@ export default function TestsPage() {
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     test_type: 'prelims' as 'prelims' | 'mains',
-    test_category: 'sectional' as 'sectional' | 'full-length' | 'mock' | 'subjective' | 'topic-wise',
+    test_category: 'sectional' as 'sectional' | 'full-length' | 'mock' | 'subjective' | 'topic-wise' | 'ncert',
     subject: '',
     total_marks: '',
     scored_marks: '',

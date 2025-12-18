@@ -15,7 +15,7 @@ export interface SubjectProgress {
 export interface TestRecord {
   id: number;
   test_type: 'prelims' | 'mains';
-  test_category: 'sectional' | 'full-length' | 'mock' | 'subjective' | 'topic-wise';
+  test_category: 'sectional' | 'full-length' | 'mock' | 'subjective' | 'topic-wise' | 'ncert';
   subject: string;
   total_marks: number;
   scored_marks: number;

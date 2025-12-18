@@ -66,7 +66,7 @@ export async function initDatabase() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT DEFAULT 1,
         test_type ENUM('prelims', 'mains'),
-        test_category ENUM('sectional', 'full-length', 'mock', 'subjective', 'topic-wise'),
+        test_category ENUM('sectional', 'full-length', 'mock', 'subjective', 'topic-wise', 'ncert'),
         subject VARCHAR(100),
         total_marks INT,
         scored_marks DECIMAL(5,2),
